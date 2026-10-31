@@ -35,7 +35,7 @@ describe('health checks', () => {
   });
 
   it('bounds a hung dependency and clears timeout timers', async () => {
-    jest.useFakeTimers();
+    jest.useFakeTimers({ doNotFake: ['performance'] });
     const result = boundedCheck(() => new Promise(() => {}));
     jest.advanceTimersByTime(2000);
     await expect(result).resolves.toBe(false);
