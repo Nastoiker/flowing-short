@@ -5,6 +5,17 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Transactional outbox: retain until publication; consumers deduplicate by id.
+model OutboxEvent {
+  id          String   @id @default(uuid())
+  aggregateId String
+  payload     String
+  createdAt   DateTime @default(now())
+  publishedAt DateTime?
+
+  @@index([publishedAt, createdAt])
+}
+
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
