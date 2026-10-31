@@ -22,6 +22,8 @@ docker compose -p flowing-short-test -f compose.yaml -f compose.test.yaml exec -
 
 ## Бесплатная ссылка для клиента
 
+На Windows откройте Docker Desktop и дважды нажмите `start-demo.cmd`. Скопируйте напечатанную HTTPS-ссылку клиенту. `stop-demo.cmd` закрывает публичный доступ. Аналогичные команды из терминала:
+
 ```sh
 node scripts/demo.mjs start
 node scripts/demo.mjs status
