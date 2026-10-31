@@ -45,7 +45,8 @@ services:
       KAFKA_BROKERS: kafka:9092
       KAFKA_TOPIC: flowing.user.registered.v1
       PORT: 8000
-      EXTERNAL_NOTIFICATIONS_ENABLED: 'false'
+      EMAIL_ENABLED: 'false'
+      TELEGRAM_ENABLED: 'false'
     volumes:
       - app-data:/app/backend/data
       - uploads:/app/backend/uploads
