@@ -172,9 +172,9 @@ describe('API with isolated SQLite database', () => {
  await request(app.getHttpServer()).patch('/user/'+userId).set('Authorization','Bearer '+token).send({login:'  Normalized name  '}).expect(200);
  expect((await db.userModel.findUniqueOrThrow({where:{id:userId}})).login).toBe('Normalized name');
  });
- it('creates comments and authoritative feed counters together', async () => {
+ it.each(['/comment/createComment','/user/createComment'])('creates comments and authoritative feed counters together through %s', async route => {
  const before=(await db.video.findUniqueOrThrow({where:{id:'other-video'}})).comment_count;
- const response=await request(app.getHttpServer()).post('/comment/createComment').set('Authorization','Bearer '+token).send({videoId:'other-video',comment:'Synthetic comment'}).expect(201);
+ const response=await request(app.getHttpServer()).post(route).set('Authorization','Bearer '+token).send({videoId:'other-video',comment:'Synthetic comment'}).expect(201);
  expect(response.body.videoCommentCount).toBe(before+1);
  const feed=await request(app.getHttpServer()).get('/Video/feed?limit=30').expect(200);
  expect(feed.body.items.find(v=>v.id==='other-video').comment_count).toBe(before+1);
