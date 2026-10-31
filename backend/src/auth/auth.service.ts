@@ -1,4 +1,4 @@
-import {ConflictException, Injectable, InternalServerErrorException, UnauthorizedException} from '@nestjs/common';
+import {BadRequestException, ConflictException, Injectable, InternalServerErrorException, UnauthorizedException} from '@nestjs/common';
 import { AuthDto } from './dto/auth.dto';
 import { UserModel } from '@prisma/client';
 import { genSalt, hash, compare } from 'bcryptjs';
@@ -11,42 +11,30 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma-service';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import * as fs from 'fs';
-import { randomUUID } from 'crypto';
+import { RegisterAccount } from '../identity/application/register-account';
+import { normalizeEmail, RegistrationViolation, AccountAlreadyExists } from '../identity/domain/registration';
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly registerAccount: RegisterAccount,
   ) {}
   async createUser(dto: CreateUserDto) {
-    try {
-      const id = randomUUID();
-      const hashpassword = await hash(dto.hashpassword, await genSalt(10));
-      // Prepare storage before committing the account; a filesystem failure cannot leave an account
-      // created behind a failed registration response.
-      await Promise.all(['video', 'music', 'avatar'].map(directory =>
-        fs.promises.mkdir(`uploads/users/${id}/${directory}`, { recursive: true })));
-      const createdUser = await this.prisma.$transaction(async transaction => {
-        const user = await transaction.userModel.create({ data: {
-          id, email: dto.email, login: dto.login, authorUrl: dto.login,
-          phone: dto.phone, hashpassword, role: 'user',
-        } });
-        const eventId = randomUUID();
-        await transaction.outboxEvent.create({ data: {
-          id: eventId, aggregateId: user.id,
-          payload: JSON.stringify({ eventId, type: 'user.registered.v1', userId: user.id }),
-        } });
-        return user;
-      });
-      const { hashpassword: _password, ...safeUser } = createdUser;
-      return safeUser;
-    } catch (error) {
-      if (error?.code === 'P2002') throw new ConflictException('Account already exists');
+    try { return await this.registerAccount.execute(dto); }
+    catch (error) {
+      if (error?.code === 'P2002' || error instanceof AccountAlreadyExists) throw new ConflictException('Account already exists');
+      if (error instanceof RegistrationViolation) throw new BadRequestException(error.message);
       throw new InternalServerErrorException('Registration unavailable');
     }
   }
   async findUser(email: string): Promise<UserModel | null> {
-    return this.prisma.userModel.findFirst({ where: { email } });
+    const exact = await this.prisma.userModel.findFirst({ where: { email: email.trim() } });
+    if (exact) return exact;
+    // Existing databases may contain case-distinct accounts. Never merge them or
+    // authenticate an ambiguous case-folded match; their exact email still works.
+    const matches = await this.prisma.$queryRaw<Array<{ id: string }>>`SELECT id FROM UserModel WHERE lower(email) = ${normalizeEmail(email)} LIMIT 2`;
+    return matches.length === 1 ? this.prisma.userModel.findUnique({ where: { id: matches[0].id } }) : null;
   }
   async validateUser(
     email: string,

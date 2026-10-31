@@ -1,3 +1,4 @@
+import { CatalogModule } from '../catalog/catalog.module';
 import { Module } from '@nestjs/common';
 import { UserController } from '../user/user.controller';
 import { UserService } from '../user/user.service';
@@ -10,6 +11,7 @@ import { MusicService } from '../music/music.service';
 
 @Module({
   imports: [
+    CatalogModule,
     ServeStaticModule.forRoot({
       rootPath: `${path}/uploads`,
       serveRoot: '/media',
@@ -17,6 +19,6 @@ import { MusicService } from '../music/music.service';
     }),
   ],
   controllers: [VideoController],
-  providers: [VideoService, PrismaService, UserService, MusicService],
+  providers: [VideoService, UserService, MusicService],
 })
 export class VideoModule {}

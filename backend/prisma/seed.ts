@@ -1,3 +1,4 @@
+import { identityEvent } from '../src/identity/domain/registration';
 import { PrismaClient } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { mkdir, writeFile } from 'fs/promises';
@@ -13,6 +14,10 @@ export async function seed() {
     hashpassword: await hash('DemoPassword123!',10), avatar: '/uploads/demo.svg', role: 'user',
   } });
   const user = await prisma.userModel.findUniqueOrThrow({ where: { email: 'demo@example.test' } });
+  const event = identityEvent('user.registered.v1', 'demo-registration-v1', user, new Date('2026-01-01T00:00:00Z'));
+  await prisma.outboxEvent.upsert({ where: { id: event.eventId }, update: {}, create: {
+    id: event.eventId, aggregateId: user.id, payload: JSON.stringify(event), createdAt: new Date(event.occurredAt),
+  } });
   await prisma.firstLevelCategory.upsert({ where: { id: 'demo-category' }, update: {}, create: {
     id: 'demo-category', name: 'Demo', alias: 'demo',
   } });

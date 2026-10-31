@@ -7,11 +7,14 @@ generator client {
 
 // Transactional outbox: retain until publication; consumers deduplicate by id.
 model OutboxEvent {
-  id          String   @id @default(uuid())
-  aggregateId String
-  payload     String
-  createdAt   DateTime @default(now())
-  publishedAt DateTime?
+  id            String    @id @default(uuid())
+  aggregateId   String
+  payload       String
+  createdAt     DateTime  @default(now())
+  publishedAt   DateTime?
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime?
+  lastError     String?
 
   @@index([publishedAt, createdAt])
 }
@@ -20,71 +23,117 @@ datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
+
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-
 model UserModel {
-  id           String    @id @default(uuid())
-  authorUrl    String
-  email        String @unique()
-  login        String
-  phone        String?
-  hashpassword String
-  isActive     Boolean @default(true)
-  Comment      Comment[] @relation("CommentWritenBy")
-  userComment  UserCommentOnComment[] @relation("UserCommentOnUser")
-  videos       Video[]   @relation("UserVideo")
-  avatar       String?
-  role String  @default("user")
-  subscribers_count Int @default(0)
-  following_count Int @default(0)
-  music Music[] @relation("UserMusic")
-  LikeCount Int @default(0)
-  hisLikes  Int @default(0)
-  folowing Folower[] @relation("FolowBy")
-  folowers Folower[] @relation("FolowChannel")
-  reportsVideo ReportOnVideo[]
-  Like         Like[]    @relation("LikedBy")
-  likeComment LikeComment[] @relation("userLikeComment")
-  watching HistoryWatching[] @relation("watchUserHistory")
+  identityVersion   Int                    @default(0)
+  id                String                 @id @default(uuid())
+  authorUrl         String
+  email             String                 @unique()
+  login             String
+  phone             String?
+  hashpassword      String
+  isActive          Boolean                @default(true)
+  Comment           Comment[]              @relation("CommentWritenBy")
+  userComment       UserCommentOnComment[] @relation("UserCommentOnUser")
+  videos            Video[]                @relation("UserVideo")
+  avatar            String?
+  role              String                 @default("user")
+  subscribers_count Int                    @default(0)
+  following_count   Int                    @default(0)
+  music             Music[]                @relation("UserMusic")
+  LikeCount         Int                    @default(0)
+  hisLikes          Int                    @default(0)
+  folowing          Folower[]              @relation("FolowBy")
+  folowers          Folower[]              @relation("FolowChannel")
+  reportsVideo      ReportOnVideo[]
+  Like              Like[]                 @relation("LikedBy")
+  likeComment       LikeComment[]          @relation("userLikeComment")
+  watching          HistoryWatching[]      @relation("watchUserHistory")
 }
+
 model HistoryWatching {
-    id String    @id @default(uuid())
-     createdAt        DateTime            @default(now())
-    videoId String
-    video Video @relation("watchHistoryVideo",  fields: [videoId], references: [id], onDelete: Cascade)
-    userId String?
-    user UserModel? @relation("watchUserHistory",  fields: [userId], references: [id], onUpdate: NoAction)
+  id        String     @id @default(uuid())
+  createdAt DateTime   @default(now())
+  videoId   String
+  video     Video      @relation("watchHistoryVideo", fields: [videoId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      UserModel? @relation("watchUserHistory", fields: [userId], references: [id], onUpdate: NoAction)
+
+  @@index([videoId])
+  @@index([userId, createdAt])
 }
+
 model Folower {
- id        String    @id @default(uuid())
+  id        String    @id @default(uuid())
   createdAt DateTime  @default(now())
-  folow      Boolean @default(true)
-  userId  String @unique()
-  authorId String @unique()
-  folowBy    UserModel @relation("FolowBy", fields: [userId], references: [id])
-  author    UserModel     @relation("FolowChannel", fields: [authorId], references: [id], onUpdate: NoAction)
+  folow     Boolean   @default(true)
+  userId    String
+  authorId  String
+  folowBy   UserModel @relation("FolowBy", fields: [userId], references: [id])
+  author    UserModel @relation("FolowChannel", fields: [authorId], references: [id], onUpdate: NoAction)
+
+  @@unique([userId, authorId])
+  @@index([authorId])
+}
+
+model EventInbox {
+  eventId    String   @id
+  receivedAt DateTime @default(now())
+}
+
+model CreatorDirectory {
+  userId           String   @id
+  displayName      String
+  authorUrl        String
+  registeredAt     DateTime
+  updatedAt        DateTime
+  aggregateVersion Int      @default(-1)
+
+  @@index([registeredAt, userId])
+}
+
+model RejectedEvent {
+  id         String   @id @default(uuid())
+  topic      String
+  partition  Int
+  offset     String
+  reason     String
+  receivedAt DateTime @default(now())
+
+  @@unique([topic, partition, offset])
+}
+
+// Historical duplicates are retained here before canonical Like uniqueness is installed.
+model LegacyLikeArchive {
+  id         String   @id
+  createdAt  DateTime
+  like       Boolean
+  likeById   String
+  videoId    String
+  archivedAt DateTime @default(now())
 }
 
 model Music {
-    id String  @id @default(uuid())
-    name String @unique()
-    user UserModel @relation("UserMusic", fields: [userId], references: [id])
-    userId String
-    alias String @unique()
-    videos       Video[]   @relation("MusicVideo")
-    img String
-    music_url String @unique()
+  id        String    @id @default(uuid())
+  name      String    @unique()
+  user      UserModel @relation("UserMusic", fields: [userId], references: [id])
+  userId    String
+  alias     String    @unique()
+  videos    Video[]   @relation("MusicVideo")
+  img       String
+  music_url String    @unique()
 }
+
 model FirstLevelCategory {
   id                  String                @id @default(uuid())
   name                String
   alias               String
-  icon String?
+  icon                String?
   secondLevelCategory SecondLevelCategory[] @relation("firstCategory")
 }
-
 
 model SecondLevelCategory {
   id                 String             @id @default(uuid())
@@ -96,8 +145,8 @@ model SecondLevelCategory {
 }
 
 model Video {
-   name String
-   alias String  @unique()
+  name             String
+  alias            String              @unique()
   isActive         Boolean
   updated_at       DateTime            @updatedAt
   createdAt        DateTime            @default(now())
@@ -115,60 +164,69 @@ model Video {
   Type             String
   width            Int
   height           Int
-  watchers  HistoryWatching[] @relation("watchHistoryVideo")
-  Comment Comment[] @relation("CommentsVideo")
-  musicId String?
-  music Music?    @relation("MusicVideo", fields: [musicId], references: [id], onDelete: Cascade)
-  share_count      Int                   @default(0)
+  watchers         HistoryWatching[]   @relation("watchHistoryVideo")
+  Comment          Comment[]           @relation("CommentsVideo")
+  musicId          String?
+  music            Music?              @relation("MusicVideo", fields: [musicId], references: [id], onDelete: Cascade)
+  share_count      Int                 @default(0)
   view_count       Int                 @default(0)
   comment_count    Int                 @default(0)
   likesCount       Int                 @default(0)
   likes            Like[]              @relation("LikeVideos")
   userId           String
-  authorVideo             UserModel           @relation("UserVideo", fields: [userId], references: [id], onDelete: Cascade)
-  ReportOnVideo    ReportOnVideo[]  @relation("ReportOnVideoVideo")
-}
+  authorVideo      UserModel           @relation("UserVideo", fields: [userId], references: [id], onDelete: Cascade)
+  ReportOnVideo    ReportOnVideo[]     @relation("ReportOnVideoVideo")
 
+  @@index([isActive, createdAt, id])
+  @@index([isActive, likesCount, id])
+  @@index([userId])
+  @@index([secondCategoryId])
+}
 
 model TagOnVideo {
   video   Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
   videoId String
   tag     Tag    @relation(fields: [tagId], references: [id])
   tagId   String
+
   @@id([tagId, videoId])
 }
 
-
 model Comment {
-  id            String    @id @default(uuid())
-  createdAt     DateTime  @default(now())
-  likeCount Int  @default(0)
-  pictures      String?
-  comment       String
-  writtenById   String
-  videoId String
-  video Video @relation("CommentsVideo", fields: [videoId], references: [id], onDelete: Cascade)
-  writtenBy     UserModel @relation("CommentWritenBy", fields: [writtenById], references: [id], onDelete: Cascade)
-  likes LikeComment[] @relation("likesComment")
+  id           String                 @id @default(uuid())
+  createdAt    DateTime               @default(now())
+  likeCount    Int                    @default(0)
+  pictures     String?
+  comment      String
+  writtenById  String
+  videoId      String
+  video        Video                  @relation("CommentsVideo", fields: [videoId], references: [id], onDelete: Cascade)
+  writtenBy    UserModel              @relation("CommentWritenBy", fields: [writtenById], references: [id], onDelete: Cascade)
+  likes        LikeComment[]          @relation("likesComment")
   userComments UserCommentOnComment[]
+
+  @@index([videoId, createdAt])
 }
+
 model LikeComment {
-     id            String    @id @default(uuid())
-      commentId String
-        comment Comment @relation("likesComment", fields: [commentId], references: [id])
-         userId String
-           user UserModel @relation("userLikeComment", fields: [userId], references: [id])
+  id        String    @id @default(uuid())
+  commentId String
+  comment   Comment   @relation("likesComment", fields: [commentId], references: [id])
+  userId    String
+  user      UserModel @relation("userLikeComment", fields: [userId], references: [id])
 }
+
 model UserCommentOnComment {
-   id String @id @default(uuid())
-   createdAt     DateTime  @default(now())
-   likeCount Int  @default(0)
-   comment String
-   parentId String
-   parent Comment @relation(fields: [parentId], references: [id], onDelete: Cascade)
-   userId String
-   user UserModel @relation("UserCommentOnUser", fields: [userId], references: [id])
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  likeCount Int       @default(0)
+  comment   String
+  parentId  String
+  parent    Comment   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      UserModel @relation("UserCommentOnUser", fields: [userId], references: [id])
 }
+
 model Like {
   id        String    @id @default(uuid())
   createdAt DateTime  @default(now())
@@ -177,21 +235,26 @@ model Like {
   videoId   String
   likeBy    UserModel @relation("LikedBy", fields: [likeById], references: [id], onDelete: Cascade)
   videos    Video     @relation("LikeVideos", fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([likeById, videoId])
+  @@index([videoId])
 }
 
 model ReportOnVideo {
-  video    Video       @relation("ReportOnVideoVideo", fields: [videoId], references: [id], onDelete: Cascade)
-  videoId  String
-  report   ReportVideo @relation("Reports", fields: [reportId], references: [id])
-  reportId String
-  createdAt DateTime  @default(now())
-  userId String
-  user   UserModel @relation(fields: [userId], references: [id])
+  video     Video       @relation("ReportOnVideoVideo", fields: [videoId], references: [id], onDelete: Cascade)
+  videoId   String
+  report    ReportVideo @relation("Reports", fields: [reportId], references: [id])
+  reportId  String
+  createdAt DateTime    @default(now())
+  userId    String
+  user      UserModel   @relation(fields: [userId], references: [id])
+
   @@id([videoId, reportId, userId])
 }
+
 model ReportVideo {
   id      String          @id @default(uuid())
-  code    String @unique()
+  code    String          @unique()
   message String
   video   ReportOnVideo[] @relation("Reports")
 }

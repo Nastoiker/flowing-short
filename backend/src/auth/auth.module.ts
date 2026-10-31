@@ -1,3 +1,4 @@
+import { IdentityModule } from '../identity/identity.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -12,6 +13,7 @@ import { EmailModule } from '../email/email.module';
 @Module({
   controllers: [AuthController],
   imports: [
+    IdentityModule,
     EmailModule,
     ConfigModule,
     JwtModule.registerAsync({
@@ -21,6 +23,6 @@ import { EmailModule } from '../email/email.module';
     }),
     PassportModule,
   ],
-  providers: [AuthService, JwtStratagy, PrismaService, ConfigService],
+  providers: [AuthService, JwtStratagy, ConfigService],
 })
 export class AuthModule {}

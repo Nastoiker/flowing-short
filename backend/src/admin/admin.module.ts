@@ -8,6 +8,6 @@ import {VideoService} from "../video/video-service";
 
 @Module({
   controllers: [AdminController],
-  providers: [AdminService, PrismaService, UserService, CategoryService, VideoService],
+  providers: [AdminService, UserService, CategoryService, VideoService],
 })
 export class AdminModule {}

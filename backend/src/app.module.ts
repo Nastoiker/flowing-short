@@ -1,3 +1,5 @@
+import { SocialModule } from './social/social.module';
+import { PrismaModule } from './prisma/prisma.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { HealthModule } from './health/health.module';
@@ -17,6 +19,8 @@ import { CommentModule } from './comment/comment.module';
 
 @Module({
   imports: [
+    PrismaModule,
+    SocialModule,
     ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: process.env.NODE_ENV === 'test' }),
     HealthModule,
     VideoModule,
@@ -30,6 +34,6 @@ import { CommentModule } from './comment/comment.module';
     CommentModule,
   ],
   controllers: [AppController],
-  providers: [AppService, VideoService, PrismaService],
+  providers: [AppService, VideoService],
 })
 export class AppModule {}

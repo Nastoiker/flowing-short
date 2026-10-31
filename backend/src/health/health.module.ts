@@ -3,5 +3,5 @@ import { EventsModule } from '../events/events.module';
 import { PrismaService } from '../prisma/prisma-service';
 import { HealthController } from './health.controller';
 
-@Module({ imports: [EventsModule], providers: [PrismaService], controllers: [HealthController] })
+@Module({ imports: [EventsModule], providers: [], controllers: [HealthController] })
 export class HealthModule {}

@@ -1,3 +1,4 @@
+import { ReadFeed, InvalidFeedQuery } from '../catalog/application/read-feed';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
 import { IdValidationpipe } from 'src/pipes/idValidation.pipe';
 import * as ffmpeg from 'fluent-ffmpeg';
@@ -16,6 +17,7 @@ import {
   Patch,
   Post,
   Req,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -39,7 +41,13 @@ export class VideoController {
     private readonly videoService: VideoService,
     private readonly userService: UserService,
     private readonly musicService: MusicService,
+    private readonly readFeed: ReadFeed,
   ) {}
+  @Get('feed')
+  async feed(@Query() query: { limit?: string; offset?: string; sort?: string }) {
+    try { return await this.readFeed.execute(query); }
+    catch(error) { if(error instanceof InvalidFeedQuery) throw new BadRequestException(error.message); throw error; }
+  }
   // @UseGuards(JwtAuthGuard)
   @UseGuards(JwtAuthGuard)
   @Post('create')

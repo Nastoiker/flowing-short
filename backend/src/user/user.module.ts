@@ -19,10 +19,8 @@ import { MusicService } from '../music/music.service';
   controllers: [UserController],
   providers: [
     UserService,
-    PrismaService,
     VideoService,
     CommentService,
-    MusicService,
-  ],
+    MusicService],
 })
 export class UserModule {}

@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma-service';
 import {
   Prisma,
@@ -60,13 +60,15 @@ export class VideoService {
     userId: string | null,
     videoId: string,
   ): Promise<HistoryWatching> {
-    return await this.prisma.historyWatching.create({
-      data: {
-        userId,
-        videoId,
-      },
+    if (typeof videoId !== 'string' || !videoId || videoId.length > 128) throw new BadRequestException('Invalid video identifier');
+    return this.prisma.write(async tx => {
+      if (!(await tx.video.findFirst({ where: { id: videoId, isActive: true }, select: { id: true } }))) throw new NotFoundException('Video not found');
+      const history = await tx.historyWatching.create({ data: { userId: userId || null, videoId } });
+      await tx.video.update({ where: { id: videoId }, data: { view_count: { increment: 1 } } });
+      return history;
     });
   }
+
   async getVideoByTag(tagName) {
     const tag = await this.prisma.tag.findUnique({
       where: {

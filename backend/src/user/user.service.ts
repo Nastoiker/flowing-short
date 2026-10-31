@@ -1,3 +1,6 @@
+import { SocialGraph } from '../social/application/social-graph';
+import { SocialViolation } from '../social/domain/relationships';
+import { identityEvent, validatePassword } from '../identity/domain/registration';
 import { Injectable, BadRequestException, UnauthorizedException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
 import {
@@ -19,7 +22,16 @@ import { LikeCommentDto } from './dto/likeComment-dto';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private readonly social: SocialGraph) {}
+  private async socialAction(action: () => Promise<unknown>): Promise<any> {
+    try { return await action(); } catch(error) {
+      if (error instanceof SocialViolation) {
+        if(error.code === 'missing') throw new NotFoundException(error.message);
+        if(error.code === 'forbidden') throw new ForbiddenException(error.message);
+        throw new BadRequestException(error.message);
+      } throw error;
+    }
+  }
   async user(
     userWhereUniqueInput: Prisma.UserModelWhereUniqueInput,
   ): Promise<UserModel | null> {
@@ -150,82 +162,7 @@ export class UserService {
     });
   }
   async like(likeById: string, videoId: string): Promise<Like> {
-    const checkExist = await this.prisma.like.findMany({
-      where: {
-        likeById,
-      },
-      select: { videoId: true, id: true },
-    });
-    let checkExistVideo = { videoId: null, likeId: null, exist: false };
-    checkExist.forEach((c) => {
-      if (videoId === c.videoId) {
-        return (checkExistVideo = {
-          videoId: c.videoId,
-          likeId: c.id,
-          exist: true,
-        });
-      }
-    });
-
-    if (checkExistVideo.exist) {
-      const likesCountVideo = await this.prisma.video.findUnique({
-        where: {
-          id: checkExistVideo.videoId,
-        },
-        select: { likesCount: true, authorVideo: true },
-      });
-      await this.prisma.video.update({
-        where: {
-          id: checkExistVideo.videoId,
-        },
-        data: {
-          likesCount: likesCountVideo.likesCount - 1,
-        },
-      });
-      await this.prisma.userModel.update({
-        where: {
-          id: likesCountVideo.authorVideo.id,
-        },
-        data: {
-          LikeCount: likesCountVideo.authorVideo.LikeCount - 1,
-        },
-      });
-      return await this.prisma.like.delete({
-        where: {
-          id: checkExistVideo.likeId,
-        },
-      });
-    }
-    const likesCountVideo = await this.prisma.video.findUnique({
-      where: {
-        id: videoId,
-      },
-      select: { likesCount: true, authorVideo: true },
-    });
-    await this.prisma.video.update({
-      where: {
-        id: videoId,
-      },
-      data: {
-        likesCount: likesCountVideo.likesCount + 1,
-      },
-    });
-    console.log(checkExistVideo);
-    await this.prisma.userModel.update({
-      where: {
-        id: likesCountVideo.authorVideo.id,
-      },
-      data: {
-        LikeCount: likesCountVideo.authorVideo.LikeCount + 1,
-      },
-    });
-    return this.prisma.like.create({
-      data: {
-        likeById,
-        videoId,
-        like: true,
-      },
-    });
+    return this.socialAction(() => this.social.toggleLike(likeById, videoId));
   }
 
   async updateAvatar(user: UserModel, file: Express.Multer.File) {
@@ -265,13 +202,23 @@ export class UserService {
   async updateProfile(user: UserModel, file: Express.Multer.File | undefined, update: UpdateUserDto) {
     const data: Prisma.UserModelUpdateInput = { login: update.login, phone: update.phone };
     if (update.password) {
+      try { validatePassword(update.password); } catch (error) { throw new BadRequestException(error.message); }
       if (!update.oldpassword || !(await compare(update.oldpassword, user.hashpassword))) {
         throw new UnauthorizedException('Current password is incorrect');
       }
       data.hashpassword = await hash(update.password, 10);
     }
     if (file) await this.updateAvatar(user, file);
-    return this.prisma.userModel.update({ where: { id: user.id }, data });
+    return this.prisma.write(async tx => {
+      const updated = await tx.userModel.update({ where: { id: user.id }, data: {
+        ...data, ...(data.login !== undefined ? { identityVersion: { increment: 1 } } : {}),
+      } });
+      if (data.login !== undefined) {
+        const event = identityEvent('user.profile.updated.v1', randomUUID(), updated, new Date());
+        await tx.outboxEvent.create({ data: { id: event.eventId, aggregateId: updated.id, payload: JSON.stringify(event) } });
+      }
+      return updated;
+    });
   }
   async createUser(data: Prisma.UserModelCreateInput): Promise<UserModel> {
     return this.prisma.userModel.create({
@@ -294,80 +241,10 @@ export class UserService {
     return this.prisma.tag.create({ data: { name } });
   }
   async unfollowChannel(id: string, userId: string, authorId: string) {
-    const existing = await this.prisma.folower.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException();
-    if (existing.userId !== userId || existing.authorId !== authorId) throw new ForbiddenException();
-    const folow = await this.prisma.folower.delete({
-      where: {
-        id,
-      },
-    });
-    const user = await this.prisma.userModel.findUnique({
-      where: {
-        id: userId,
-      },
-      select: { following_count: true },
-    });
-    const author = await this.prisma.userModel.findUnique({
-      where: {
-        id: authorId,
-      },
-      select: { subscribers_count: true },
-    });
-    await this.prisma.userModel.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        following_count: user.following_count - 1,
-      },
-    });
-    await this.prisma.userModel.update({
-      where: {
-        id: authorId,
-      },
-      data: {
-        subscribers_count: author.subscribers_count - 1,
-      },
-    });
-    return folow;
+    return this.socialAction(() => this.social.unfollow(id, userId, authorId));
   }
   async followChannel(userId: string, authorId: string) {
-    const folow = await this.prisma.folower.create({
-      data: {
-        userId,
-        authorId,
-      },
-    });
-    const user = await this.prisma.userModel.findUnique({
-      where: {
-        id: userId,
-      },
-      select: { following_count: true },
-    });
-    const author = await this.prisma.userModel.findUnique({
-      where: {
-        id: authorId,
-      },
-      select: { subscribers_count: true },
-    });
-    await this.prisma.userModel.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        following_count: user.following_count + 1,
-      },
-    });
-    await this.prisma.userModel.update({
-      where: {
-        id: authorId,
-      },
-      data: {
-        subscribers_count: author.subscribers_count + 1,
-      },
-    });
-    return folow;
+    return this.socialAction(() => this.social.follow(userId, authorId));
   }
   async deleteUser(
     where: Prisma.UserModelWhereUniqueInput,

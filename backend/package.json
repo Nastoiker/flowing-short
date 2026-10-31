@@ -19,7 +19,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "typecheck": "tsc --noEmit --incremental false",
     "test:integration": "node test/run-integration.cjs",
-    "test:kafka": "node --test test/kafka.integration.cjs"
+    "test:kafka": "node --test test/kafka.integration.cjs",
+    "test:migrations": "node --test test/migration.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^9.0.0",
