@@ -10,6 +10,7 @@ const api = new URL(process.env.API_URL || 'http://127.0.0.1:18000');
 assert.ok(['127.0.0.1', 'localhost', '[::1]'].includes(api.hostname), 'Health fault injection requires a loopback API_URL');
 assert.equal(api.protocol, 'http:');
 assert.equal(api.username + api.password + api.search + api.hash, '');
+assert.equal(api.pathname, '/', 'API_URL must be an origin');
 const root = fileURLToPath(new URL('../', import.meta.url));
 const composeArgs = ['compose', '-p', project, '-f', 'compose.yaml', '-f', 'compose.test.yaml'];
 
@@ -41,6 +42,9 @@ for (const service of ['backend', 'kafka']) {
   const label = docker(['inspect', '--format', '{{index .Config.Labels "com.docker.compose.project"}}', id]);
   assert.equal(label, project);
 }
+const publishedApi = compose('port', 'backend', '8000');
+assert.match(publishedApi, /^127\.0\.0\.1:\d+$/, 'Test API must only be published on loopback');
+assert.equal(api.port || '80', publishedApi.split(':').at(-1), 'API_URL must target this isolated Compose backend');
 docker([...composeArgs, 'exec', '-T', 'backend', 'node'], `${verifyIsolation}\nconsole.log('isolated');`);
 
 async function probe(path, expected, failedDependency = 'kafka') {
