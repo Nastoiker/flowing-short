@@ -1,6 +1,6 @@
-﻿"use client"
+"use client"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,8 @@ type Registration = { email: string; login: string; hashpassword: string; confir
 export default function RegistrationPage() {
   const { register, watch, handleSubmit, formState: { errors, isSubmitting } } = useForm<Registration>()
   const [error, setError] = useState('')
+  const [ready, setReady] = useState(false)
+  useEffect(() => setReady(true), [])
   const submit = handleSubmit(async ({confirm, ...values}) => {
     setError('')
     try {
@@ -19,7 +21,8 @@ export default function RegistrationPage() {
   })
   return <main className="mx-auto max-w-md p-5">
     <h1 className="text-2xl">Регистрация</h1>
-    <form noValidate onSubmit={submit} className="space-y-4 my-5">
+    <form method="post" noValidate onSubmit={submit} className="my-5">
+      <fieldset disabled={!ready} className="space-y-4">
       <Label htmlFor="email">Email</Label>
       <Input id="email" type="email" autoComplete="email" error={errors.email} {...register('email',{required:'Введите email',pattern:{value:/^\S+@\S+\.\S+$/,message:'Введите корректный email'}})}/>
       <Label htmlFor="login">Имя</Label>
@@ -30,6 +33,8 @@ export default function RegistrationPage() {
       <Input id="confirm" type="password" autoComplete="new-password" error={errors.confirm} {...register('confirm',{required:'Повторите пароль',validate:value=>value===watch('hashpassword') || 'Пароли должны совпадать'})}/>
       {error && <p role="alert">{error}</p>}
       <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Создаём…' : 'Создать аккаунт'}</Button>
+      </fieldset>
+      <noscript>Для входа и регистрации включите JavaScript в браузере.</noscript>
     </form>
     <Link href="/authorization">Войти</Link>
   </main>

@@ -1,6 +1,6 @@
-﻿"use client"
+"use client"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label"
 export default function LoginPage() {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<{email: string; password: string}>()
   const [error, setError] = useState("")
+  const [ready, setReady] = useState(false)
+  useEffect(() => setReady(true), [])
   const submit = handleSubmit(async values => {
     setError("")
     try {
@@ -21,13 +23,16 @@ export default function LoginPage() {
   })
   return <main className="mx-auto max-w-md p-5">
     <h1 className="text-2xl">Вход</h1>
-    <form noValidate onSubmit={submit} className="space-y-4 my-5">
+    <form method="post" noValidate onSubmit={submit} className="my-5">
+      <fieldset disabled={!ready} className="space-y-4">
       <Label htmlFor="email">Email</Label>
       <Input id="email" type="email" autoComplete="email" error={errors.email} {...register('email', { required: 'Введите email', pattern: {value: /^\S+@\S+\.\S+$/, message: 'Введите корректный email'} })}/>
       <Label htmlFor="password">Пароль</Label>
       <Input id="password" type="password" autoComplete="current-password" error={errors.password} {...register('password', {required:'Введите пароль'})}/>
       {error && <p role="alert">{error}</p>}
       <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Входим…' : 'Войти'}</Button>
+      </fieldset>
+      <noscript>Для входа и регистрации включите JavaScript в браузере.</noscript>
     </form>
     <Link href="/registration">Создать аккаунт</Link>
   </main>
