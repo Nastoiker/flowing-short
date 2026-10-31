@@ -9,6 +9,7 @@
 | Identity | Регистрация аккаунта, публичные события профиля, атомарная запись аккаунта и outbox | `backend/src/identity` |
 | Social | Подписки и лайки, инварианты связей и переходы состояния | `backend/src/social` |
 | Discovery | Проверка событий, inbox и проекция каталога авторов | `backend/src/discovery` |
+| Catalog | Ограниченные запросы ленты, сортировка и метаданные страниц | `backend/src/catalog` |
 | Transport | HTTP-контроллеры, Kafka producer/consumer, bounded health checks | существующие модули, `events`, `health` |
 | Persistence | Единый Prisma client и SQL-миграции | `prisma`, `backend/prisma/migrations` |
 

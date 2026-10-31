@@ -44,6 +44,8 @@ jobs:
           npm test --prefix backend -- --runInBand --ci --json --outputFile=test-results/unit.json
       - name: API integration with disposable SQLite
         run: npm run test:integration --prefix backend -- --ci --json --outputFile=test-results/integration.json
+      - name: Upgrade a populated legacy database without data loss
+        run: npm run test:migrations --prefix backend | tee backend/test-results/migrations.log
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:

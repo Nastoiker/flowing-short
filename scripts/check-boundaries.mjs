@@ -49,8 +49,10 @@ function sources(directory) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const errors = [];
   let checked = 0;
-  for (const context of ['identity', 'social', 'discovery']) {
-    for (const layer of ['domain', 'application']) {
+  const contexts = { identity: ['domain', 'application'], social: ['domain', 'application'],
+    discovery: ['domain', 'application'], catalog: ['application'] };
+  for (const [context, layers] of Object.entries(contexts)) {
+    for (const layer of layers) {
       const files = sources(join(root, 'backend/src', context, layer));
       if (!files.length) errors.push(`Missing ${context}/${layer} implementation`);
       for (const filename of files) {

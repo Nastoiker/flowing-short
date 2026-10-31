@@ -11,6 +11,8 @@ docker compose up -d --build --wait
 
 Сайт: http://localhost:3000. `setup.mjs` создаёт случайный JWT-секрет в игнорируемом `.env` и сохраняет существующий файл. Compose применяет миграции без сброса БД; данные, загруженные файлы и Kafka хранятся в постоянных томах. `docker compose down` сохраняет данные; **не используйте `down -v` для рабочего проекта**.
 
+Лента загружается страницами и поддерживает сортировку; раздел `/creators` показывает каталог авторов, обновляемый через Kafka. [Структура кода, DDD и границы согласованности](docs/architecture.md).
+
 Для демонстрации с синтетическими данными используйте отдельный стек:
 
 ```sh
@@ -43,6 +45,8 @@ npm run typecheck --prefix backend
 npm run build --prefix backend
 npm test --prefix backend -- --runInBand
 npm run test:integration --prefix backend
+npm run test:migrations --prefix backend
+node scripts/check-boundaries.mjs
 npm run build --prefix frontend
 npm run typecheck --prefix frontend
 npx --prefix frontend playwright install chromium
@@ -74,6 +78,8 @@ Frontend: `/health/live`. Backend: `/health/live` отвечает при жив
 На каждый push и pull request запускается `.github/workflows/ci.yml`. Сначала установка по lock-файлам, типы, сборки, unit/API-тесты. Затем отдельный Docker-стек, повторный seed, Chromium desktop/mobile, реальная доставка Kafka, отказ БД/брокера и восстановление. Логи, JSON-отчёты, Playwright HTML, screenshots и traces доступны во вкладке **Actions → запуск → Artifacts** (7 дней). CI удаляет только свои временные тома. В настройках защиты `main` включите обязательность обоих jobs перед merge.
 
 ## Сервер
+
+Для проверяемого локального Kubernetes: `node scripts/k8s.mjs start`, затем `node scripts/k8s.mjs test`. Нужны Docker 28+, kubectl и Node 22; создаётся отдельный kind-кластер. [Манифесты, команды и ограничения Kubernetes](k8s/README.md). CI запускает этот smoke после основных проверок приложения.
 
 Автоматического деплоя и подключённого сервера в репозитории нет. На сервере с Docker/Compose клонируйте **коммит с успешным CI**, выполните локальные команды запуска выше. Добавьте HTTPS reverse proxy перед `127.0.0.1:3000`, настройте домен, резервное копирование SQLite/загрузок и мониторинг health. Секрет `.env` создавайте на сервере; не копируйте тестовые пароли и данные. Для восстановления БД проверяйте резервную копию, не запускайте reset миграций.
 
