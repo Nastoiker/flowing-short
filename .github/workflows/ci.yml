@@ -23,6 +23,10 @@ jobs:
             frontend/package-lock.json
       - run: npm ci --prefix backend --no-audit --no-fund
       - run: npm ci --prefix frontend --no-audit --no-fund
+      - name: Enforce domain and application dependency boundaries
+        run: |
+          node --test scripts/check-boundaries.test.mjs
+          node scripts/check-boundaries.mjs
       - name: Validate client demo configuration without publishing a tunnel
         run: |
           node --check scripts/demo.mjs
