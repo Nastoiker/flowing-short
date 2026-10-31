@@ -26,7 +26,7 @@ export class HealthController {
   async ready() {
     const [database, kafka] = await Promise.all([
       boundedCheck(() => {
-        if (!this.databaseCheck) this.databaseCheck = this.prisma.$queryRaw`SELECT 1`
+        if (!this.databaseCheck) this.databaseCheck = this.prisma.$queryRaw`SELECT id FROM UserModel LIMIT 1`
           .then(result => result).finally(() => { this.databaseCheck = undefined; });
         return this.databaseCheck;
       }),

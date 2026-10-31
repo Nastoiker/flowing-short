@@ -43,7 +43,7 @@ for (const service of ['backend', 'kafka']) {
 }
 docker([...composeArgs, 'exec', '-T', 'backend', 'node'], `${verifyIsolation}\nconsole.log('isolated');`);
 
-async function probe(path, expected) {
+async function probe(path, expected, failedDependency = 'kafka') {
   const start = performance.now();
   const response = await fetch(new URL(path, api), { signal: AbortSignal.timeout(3500) });
   const body = await response.json();
@@ -52,7 +52,10 @@ async function probe(path, expected) {
   if (path.endsWith('/live')) assert.deepEqual(body, { status: 'ok' });
   else assert.deepEqual(body, expected === 200
     ? { status: 'ok', checks: { database: 'up', kafka: 'up' } }
-    : { status: 'unavailable', checks: { database: 'up', kafka: 'down' } });
+    : { status: 'unavailable', checks: {
+      database: failedDependency === 'database' ? 'down' : 'up',
+      kafka: failedDependency === 'kafka' ? 'down' : 'up',
+    } });
 }
 
 async function eventually(check, timeoutMs = 90000) {
@@ -82,6 +85,35 @@ function outboxState(userId) {
 
 await probe('/health/live', 200);
 await probe('/health/ready', 200);
+
+function renameUserTable(restore = false) {
+  const sql = restore
+    ? 'ALTER TABLE "_HealthProbeUserModel" RENAME TO "UserModel"'
+    : 'ALTER TABLE "UserModel" RENAME TO "_HealthProbeUserModel"';
+  const source = `${verifyIsolation}
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    prisma.$executeRawUnsafe(${JSON.stringify(sql)})
+      .then(() => console.log('ok'))
+      .catch(() => { process.exitCode = 1; })
+      .finally(() => prisma.$disconnect());
+  `;
+  docker([...composeArgs, 'exec', '-T', 'backend', 'node'], source);
+}
+
+// Rename instead of deleting/corrupting the isolated SQLite file: table data is preserved.
+let tableRenamed = false;
+try {
+  renameUserTable();
+  tableRenamed = true;
+  await probe('/health/live', 200);
+  await probe('/health/ready', 503, 'database');
+} finally {
+  if (tableRenamed) renameUserTable(true);
+}
+await probe('/health/ready', 200);
+console.log('PASS: unavailable database schema returns bounded 503; table and readiness recover');
+
 let mustRestore = false;
 try {
   mustRestore = true;
@@ -111,7 +143,6 @@ try {
   }, 45000);
   mustRestore = false;
   console.log('PASS: readiness recovers and the same pending event is acknowledged by Kafka');
-  console.log('SQLite dependency failure and timeout paths are covered by unit tests; no database files are altered here');
 } finally {
   if (mustRestore) compose('start', 'kafka');
 }

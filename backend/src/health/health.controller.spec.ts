@@ -17,6 +17,11 @@ describe('health checks', () => {
     expect(check).not.toHaveBeenCalled();
   });
 
+  it('checks the application table, not only a constant database expression', async () => {
+    await controller.ready();
+    expect(query.mock.calls[0][0][0]).toBe('SELECT id FROM UserModel LIMIT 1');
+  });
+
   it.each(['database', 'kafka'])('returns sanitized 503 on %s failure and recovers', async dependency => {
     const failing = dependency === 'database' ? query : check;
     failing.mockRejectedValueOnce(new Error('password=secret address=private-host'));
