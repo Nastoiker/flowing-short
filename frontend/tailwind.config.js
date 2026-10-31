@@ -6,6 +6,7 @@ module.exports = {
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
+    "./features/**/*.{ts,tsx}",
     "./layout-component/**/*.{ts,tsx}",
     "./ui/**/*.{ts,tsx}",
     "./content/**/*.{md,mdx}",
@@ -102,4 +103,3 @@ module.exports = {
     },
   plugins: [require("tailwindcss-animate")],
 }
-

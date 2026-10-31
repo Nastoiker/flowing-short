@@ -1,120 +1,32 @@
 "use client"
+import { useState } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { Sun, Moon, User, LogOut } from 'lucide-react'
+import { useTheme } from 'next-themes'
+import { useCurrentUser } from '@/features/auth/use-current-user'
+import { Search } from '@/components/search/search'
+import Logo from '/public/logo.svg'
+import LogoDark from '/public/logoDark.svg'
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
-import { redirect } from "next/navigation"
-import { useAppSelector } from "@/stores"
-import {
-  AuthApi,
-  useAuthorizationQuery,
-  useCheckAuthQuery,
-} from "@/stores/slices/regapi"
-import Logo from '/public/logo.svg';
-import LogoDark from '/public/logoDark.svg';
-import { cn } from "@/lib/utils"
-import {
-  Menubar,
-  MenubarContent,
-  MenubarItem,
-  MenubarMenu,
-  MenubarSeparator,
-  MenubarShortcut,
-  MenubarTrigger,
-} from "@/components/ui/menubar";
-import './header.module.css';
-import { AuthComponent } from "@/components/Auth/Auth"
-import { IHeaderProps } from "@/components/Header/HeaderProps"
-import { Search } from "@/components/search/search"
-import { Button } from "@/components/ui/button"
-import { ProfileIcon } from "@/components/user/Profile.icon"
-import Image from "next/image";
-import Moon from 'public/moon.svg';
-import Sun from 'public/sun.svg';
-import {useTheme} from "next-themes";
-export const Header = () => {
-  const { data } = useCheckAuthQuery({})
-  if (!data) {
-  } else {
-    console.log("Data:", data.email)
-  }
-  const [scrolled, setScrolled] = useState(false)
-  const { setTheme, theme } = useTheme()
-  const [isOpenMenu, setIsOpenMenu] = useState(false)
-  const changeTheme = () => {
-    console.log(theme);
-    setTheme( theme==='light' ? 'dark' : 'light');
-  }
-  const handleScroll = () => {
-    const offset = window.scrollY
-    if (offset > 50) {
-      setScrolled(true)
-    } else {
-      setScrolled(false)
-    }
-  }
-  useEffect(() => {
-    //add eventlistener to window
-    document.addEventListener("scroll", handleScroll, { passive: true })
-    // remove event on unmount to prevent a memory leak with the cleanup
-    return () => {
-      document.removeEventListener("scroll", handleScroll)
-    }
-  }, [])
-
-  return (
-    <div
-      className={cn(
-        "flex items-center z-60 h-16 border-b bg-background  max-w-screen-2xl ",
-        scrolled ? "bg-background" : "bg-background"
-      )}
-    >
-      <div className={"min-w-68 lg:pr-36"}>
-        <Link className={"min-w-[40px] min-h-[100px]"} href={"/"}>
-          {
-            theme!=='dark' ?  <Image height={100} width={100} src={Logo} alt={'logo'} /> :  <Image height={100} width={100} src={LogoDark} alt={'logo'} />
-          }
-           </Link>
-      </div>
-
-      <Search />
-      <button onClick={ () => changeTheme()}><img height={100} width={100} className={"h-8 w-8"} src={theme==='dark' ? Moon.src : Sun.src} alt="toggleTheme" /></button>
-      {data ? (
-        <div className={"flex items-center"}>
-          <Link href={"/profile"}>
-            <ProfileIcon theme={theme} user={data} />
-          </Link>{" "}
-          <Button className={"hidden sm:block"} onClick={() => localStorage.removeItem("token")}>
-            <a href={"/"}>Выйти</a>
-          </Button>
-        </div>
-      ) : (
-        <div className={'relative'}>
-
-              <button type="button" aria-label="Аккаунт" aria-expanded={isOpenMenu} onClick={() => setIsOpenMenu((s) => !s)} className={"bg-transparent"}>
-                  <svg width="35" height="35" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <g clipPath="url(#clip0_119_1313)">
-                      <path d="M6.66669 36.6667C6.66669 33.1305 8.07145 29.7391 10.5719 27.2386C13.0724 24.7381 16.4638 23.3334 20 23.3334C23.5362 23.3334 26.9276 24.7381 29.4281 27.2386C31.9286 29.7391 33.3334 33.1305 33.3334 36.6667H6.66669ZM20 21.6667C14.475 21.6667 10 17.1917 10 11.6667C10 6.14169 14.475 1.66669 20 1.66669C25.525 1.66669 30 6.14169 30 11.6667C30 17.1917 25.525 21.6667 20 21.6667Z" fill="currentcolor"/>
-                    </g>
-                    <defs>
-                      <clipPath id="clip0_119_1313">
-                        <rect width="40" height="40" fill="currentcolor"/>
-                      </clipPath>
-                    </defs>
-                  </svg>
-              </button>
-
-          {
-            isOpenMenu &&
-            <div className={'absolute p-2 visibleHeader right-[10px] bg-background border rounded-lg '}>
-            <Button className={'block'}>
-              <Link href={"/registration"}> Регистрация </Link>
-            </Button>
-            <AuthComponent />
-            </div>
-          }
-
-        </div>
-      )}
+export function Header() {
+  const {data:user}=useCurrentUser()
+  const {resolvedTheme,setTheme}=useTheme()
+  const [open,setOpen]=useState(false)
+  const logout=()=>{localStorage.removeItem('token');window.location.assign('/')}
+  return <div className="flex h-16 w-full items-center gap-3 border-b bg-background/95 px-3 backdrop-blur sm:gap-5 sm:px-6">
+    <Link href="/" aria-label="logo" className="shrink-0 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500">
+      <Image src={Logo} alt="" width={100} height={40} className="dark:hidden"/>
+      <Image src={LogoDark} alt="" width={100} height={40} className="hidden dark:block"/>
+    </Link>
+    <div className="min-w-0 flex-1"><Search/></div>
+    <button aria-label="Переключить тему" className="shrink-0 rounded-full p-2 hover:bg-accent" onClick={()=>setTheme(resolvedTheme==='dark'?'light':'dark')}><Sun size={21} className="dark:hidden"/><Moon size={21} className="hidden dark:block"/></button>
+    <div className="relative">
+      <button aria-label="Аккаунт" aria-expanded={open} onClick={()=>setOpen(value=>!value)} className="rounded-full bg-secondary p-2"><User size={22}/></button>
+      {open && <div className="absolute right-0 top-12 z-50 w-48 space-y-1 rounded-xl border bg-popover p-2 shadow-lg">
+        {user ? <><p className="truncate px-3 py-2 text-sm font-medium">{user.login}</p><Link className="block rounded-lg px-3 py-2 text-sm hover:bg-accent" href="/profile" onClick={()=>setOpen(false)}>Мой профиль</Link><Link className="block rounded-lg px-3 py-2 text-sm hover:bg-accent" href="/createVideo" onClick={()=>setOpen(false)}>Загрузить видео</Link><button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-accent" onClick={logout}><LogOut size={15}/>Выйти</button></>
+          : <><Link className="block rounded-lg px-3 py-2 text-sm hover:bg-accent" href="/authorization" onClick={()=>setOpen(false)}>Войти</Link><Link className="block rounded-lg px-3 py-2 text-sm hover:bg-accent" href="/registration" onClick={()=>setOpen(false)}>Регистрация</Link></>}
+      </div>}
     </div>
-  )
+  </div>
 }

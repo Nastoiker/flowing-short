@@ -12,10 +12,10 @@ test('catalog renders synthetic video without browser errors and fits viewport',
 })
 
 test('API failure displays retry and recovers', async ({page}) => {
- await page.route('**/api/Video/', route=>route.fulfill({status:503,contentType:'application/json',body:'{"message":"unavailable"}'}))
+ await page.route('**/api/Video/feed?*', route=>route.fulfill({status:503,contentType:'application/json',body:'{"message":"unavailable"}'}))
  await page.goto('/')
  await expect(page.getByRole('main').getByRole('alert')).toContainText('Не удалось загрузить видео')
- await page.unroute('**/api/Video/')
+ await page.unroute('**/api/Video/feed?*')
  await page.getByRole('button',{name:'Повторить',exact:true}).click()
  await expect(page.getByLabel('Synthetic demo',{exact:true})).toBeVisible()
 })

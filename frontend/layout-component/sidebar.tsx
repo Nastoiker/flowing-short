@@ -1,90 +1,21 @@
 "use client"
-
-import {
-  DetailedHTMLProps,
-  HTMLAttributes,
-  useEffect,
-  useState,
-} from "react"
-import {usePathname} from "next/navigation"
-import { motion, useReducedMotion } from "framer-motion"
-
-import { cn } from "@/lib/utils"
-import { Categories } from "@/components/Categoryes/Categories"
-import { PopularTags } from "@/components/Header/PopularTags"
-import { ButtonIcon } from "@/components/buttonIcon/ButtonIcon"
-import styles from "@/components/buttonIcon/ButtonIcon.module.css"
-import {useWidthScreen} from "@/hooks/useWidthScreen";
-
-interface LeftSiteProps
-  extends DetailedHTMLProps<
-    HTMLAttributes<HTMLButtonElement>,
-    HTMLButtonElement
-  > {}
-export const LeftSite = ({ className }: LeftSiteProps) => {
-  const pathName = usePathname();
-  const widthScreen = useWidthScreen();
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const useSlowMotion = useReducedMotion();
-  useEffect(() => {
-    if(widthScreen<766) {
-      setIsOpen(false)
-    }
-    if(widthScreen>766) {
-      setIsOpen(true);
-    }
-    console.log('widthscreen' + widthScreen);
-  }, [pathName, widthScreen])
-  const variants = {
-    opened: {
-      opacity: 1,
-      x: 0,
-      transition: {
-        stiffness: 20,
-      },
-    },
-    closed: {
-      opacity: useSlowMotion ? 1 : 0,
-      x: "-100%",
-    },
-  }
-  // const handleAnimationComplete = () => {
-  //   if (!isOpen) setIsOpen(true);
-  // };
-  // , isOpen && " block ", styles.LeftSide
-  console.log(isOpen)
-  return (
-    <div className={cn(className,"")}>
-      <ButtonIcon
-        appearance={"white"}
-        className={"fixed my-20  w-24 z-40   " + styles.MenuButtin}
-        icon={"IconMenu"}
-        aria-label="Открыть категории"
-        onClick={() => {
-          setIsOpen((o) => !o)
-        }}
-      />
-      <motion.div
-        className={
-          "w-48 fixed border-b  bg-background h-full px-2  top-16 z-50  pr-2 border-r " +
-          styles.leftSideMargin
-        }
-        variants={variants}
-        initial={false}
-        animate={isOpen ? "opened" : "closed"}
-      >
-        <ButtonIcon
-          appearance={"white"}
-          className={"absolute right-0  w-24 z-50   " + styles.MenuButtin}
-          icon={"IconClose"}
-          aria-label="Закрыть категории"
-          onClick={() => {
-            setIsOpen((o) => !o)
-          }}
-        />
-        <Categories />
-        <PopularTags />
-      </motion.div>
-    </div>
-  )
+import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
+import Link from 'next/link'
+import { Menu, X } from 'lucide-react'
+import { Categories } from '@/components/Categoryes/Categories'
+import { PopularTags } from '@/components/Header/PopularTags'
+export function LeftSite({className}: {className?:string}) {
+ const [open,setOpen]=useState(false)
+ const path=usePathname()
+ useEffect(()=>setOpen(false),[path])
+ return <div className={className}>
+  <button type="button" aria-label="Открыть категории" aria-controls="category-navigation" aria-expanded={open} onClick={()=>setOpen(true)} className="fixed left-3 top-[72px] z-30 rounded-full border bg-background p-1.5 shadow-sm md:hidden"><Menu size={18}/></button>
+  {open && <button type="button" aria-label="Скрыть меню" onClick={()=>setOpen(false)} className="fixed inset-0 top-16 z-30 bg-black/30 md:hidden"/>}
+  <aside id="category-navigation" aria-label="Категории и теги" className={`${open?'block':'hidden'} fixed bottom-0 left-0 top-16 z-40 w-48 overflow-y-auto border-r bg-background px-3 pb-8 md:block`}>
+   <button type="button" aria-label="Закрыть категории" onClick={()=>setOpen(false)} className="ml-auto mt-3 block rounded-full p-1 hover:bg-accent md:hidden"><X size={19}/></button>
+   <nav className="mt-5 space-y-1 border-b pb-4" aria-label="Главная навигация"><Link href="/" className={`block rounded-xl px-3 py-2 text-sm ${path==='/'?'bg-sky-50 font-medium text-sky-700 dark:bg-sky-950 dark:text-sky-300':'hover:bg-accent'}`}>Лента</Link><Link href="/creators" className={`block rounded-xl px-3 py-2 text-sm ${path==='/creators'?'bg-sky-50 font-medium text-sky-700 dark:bg-sky-950 dark:text-sky-300':'hover:bg-accent'}`}>Авторы</Link></nav>
+   <Categories/><PopularTags/>
+  </aside>
+ </div>
 }

@@ -1,4 +1,6 @@
 "use client"
+import { useCurrentUser } from '@/features/auth/use-current-user'
+
 
 import { useState } from "react"
   import { useRouter } from "next/navigation"
@@ -6,7 +8,7 @@ import {
   useCreateCategoryMutation,
   useCreateSecondCategoryMutation, useMusicsAllQuery, useUsersQuery, useVideoWithReportQuery,
 } from "@/stores/slices/admin.api"
-import { useCheckAuthQuery } from "@/stores/slices/regapi"
+
 
 import {cn} from "@/lib/utils";
 import {Button} from "@/components/ui/button";
@@ -25,18 +27,17 @@ export default function IndexPage() {
   // const [createCategory, Category] = useCreateCategoryMutation({});
   // const [createSecond, Second] = useCreateSecondCategoryMutation({});
   // const musics = useMusicsAllQuery({});
-  const users = useUsersQuery({});
+  const {data, isLoading, error} = useCurrentUser();
+  const users = useUsersQuery({}, {skip: data?.role !== 'admin'});
   const router = useRouter();
-  const video = useVideoWithReportQuery({});
+  const video = useVideoWithReportQuery({}, {skip: data?.role !== 'admin'});
   const [searchtUser, setSearchUser] = useState<string>('');
   const [searchVideo, setSearchVideo] = useState<string>('');
-  const {data, isLoading, error} = useCheckAuthQuery({});
+
   if(isLoading) {
     return <div></div>;
   }
-   if( data && data.role !== 'admin' || error) {
-     router.push('/');
-   }
+  if (!data || data.role !== 'admin' || error) return <p>Доступ только для администратора.</p>
   return <div className={"mx-auto w-full"}>
     <h1 className="inline-block my-10 text-4xl font-extrabold tracking-tight lg:text-5xl">
      Admin

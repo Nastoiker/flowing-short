@@ -1,4 +1,6 @@
 "use client"
+import { useCurrentUser } from '@/features/auth/use-current-user'
+
 import { useParams } from "next/navigation"
 
 import {useEffect, useState} from "react"
@@ -11,7 +13,7 @@ import { LayoutFounded } from "@/components/layout/layout.founded"
 import {searchContent} from "@/stores/slices/search.slice";
 import {LayoutMusic} from "@/components/Layout.music";
 import {LayoutChannels} from "@/components/Layout.channel";
-import {useCheckAuthQuery} from "@/stores/slices/regapi";
+
 
 export interface VideoByCategory {
   id: string
@@ -27,7 +29,7 @@ export default function PageFounded() {
   const found = useParams<{founded:string}>().founded;
   const [search, setSearch] = useState();
   const searchParams = useSearchParams();
-  const  user = useCheckAuthQuery({});
+  const  user = useCurrentUser();
   const searchvValue = searchParams.get('byValue');
   const searchState = found;
   const [activeFound, setActiveFound] = useState<string>('video');

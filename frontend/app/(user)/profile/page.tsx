@@ -1,10 +1,12 @@
 "use client"
+import { useCurrentUser } from '@/features/auth/use-current-user'
+
 
 import Image from "next/image"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { useGetVideosQuery } from "@/stores/slices/api"
-import { useCheckAuthQuery } from "@/stores/slices/regapi"
+
 
 import { LayoutVideo } from "@/components/Layot.video"
 import { LayoutMusic } from "@/components/Layout.music"
@@ -16,9 +18,8 @@ import {useTheme} from "next-themes";
 import {api_url} from "@/domen.api";
 
 export default function IndexPage() {
-  const { data } = useCheckAuthQuery({})
-  const video = useGetVideosQuery({ limit: 10, offset: 0 })
-  console.log(data)
+  const { data } = useCurrentUser()
+console.log(data)
   const { setTheme, theme } = useTheme();
   return (
     <div className={"w-full"}>
@@ -82,7 +83,7 @@ export default function IndexPage() {
             }
 
           </div>
-          <Tabs defaultValue="account" className="w-full sm:mx-0 mx-2">
+          <Tabs defaultValue="video" className="w-full sm:mx-0 mx-2">
             <TabsList>
               <TabsTrigger value="video">
                 <h1>Ваши видео</h1>
@@ -110,7 +111,7 @@ export default function IndexPage() {
         </div>
       ) : (
         <div>
-          <Button>Авторизоваться</Button>
+          <Link href="/authorization">Войдите в аккаунт</Link>
         </div>
       )}
     </div>

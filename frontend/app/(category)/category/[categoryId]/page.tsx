@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { useCheckAuthQuery } from "@/stores/slices/regapi"
+
 
 import { IVideo } from "@/types/Video.interface"
 import { LayoutVideo } from "@/components/Layot.video"

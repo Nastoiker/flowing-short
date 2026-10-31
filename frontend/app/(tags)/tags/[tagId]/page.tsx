@@ -1,8 +1,10 @@
 "use client"
+import { useCurrentUser } from '@/features/auth/use-current-user'
+
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { useCheckAuthQuery } from "@/stores/slices/regapi"
+
 
 import { IUser } from "@/types/User.interface"
 import { LayoutVideo } from "@/components/Layot.video"
@@ -23,7 +25,7 @@ export default  function PagePage() {
     dispatch(searchVideoByTag(tag));
   },[tag]);
   const videos = useAppSelector(state=> state.tag.videos);
-  const  user = useCheckAuthQuery({});
+  const  user = useCurrentUser();
   if(!videos) {
     return <div>loading</div>
   }

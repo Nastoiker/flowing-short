@@ -34,15 +34,12 @@ export const getFirstCategory = createAsyncThunk<
 >("firstCategory", async (_, { rejectWithValue }) => {
   const response = await fetch(DOMEN.category.getCategory)
   if (!response) {
-    console.log(`Not found`)
     return rejectWithValue("Not found")
   }
   if (!response.ok) {
-    console.log(`SERVER ERROR 500`)
     return rejectWithValue("SERVER ERROR 500")
   }
   const data = await response.json()
-  console.log(data)
   // await new Promise((resolve) => setTimeout(() => resolve(''),1000));
   return data
 })

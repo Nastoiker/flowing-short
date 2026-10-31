@@ -1,44 +1,28 @@
-import { rootSaga } from "@/stores/saga/root.saga"
-import { videoHostingApi } from "@/stores/slices/api"
-import categorySlice from "@/stores/slices/category.slice"
-import { MusicApi } from "@/stores/slices/music.slice"
-import { AuthApi } from "@/stores/slices/regapi"
-import searchSlice from "@/stores/slices/search.slice"
-import { UserApi } from "@/stores/slices/user.api"
-import { VideoUserApi } from "@/stores/slices/video.api"
-import createSagaMiddleware from "@redux-saga/core"
-import { configureStore } from "@reduxjs/toolkit"
-import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux"
-import {AdminApi} from "@/stores/slices/admin.api";
-import tagSlice from "@/stores/slices/tag.slice";
+import { configureStore } from '@reduxjs/toolkit'
+import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux'
+import { videoHostingApi } from './slices/api'
+import category from './slices/category.slice'
+import search from './slices/search.slice'
+import tag from './slices/tag.slice'
+import { MusicApi } from './slices/music.slice'
+import { AuthApi } from './slices/regapi'
+import { UserApi } from './slices/user.api'
+import { VideoUserApi } from './slices/video.api'
+import { AdminApi } from './slices/admin.api'
 
-export type RootState = ReturnType<typeof store.getState>
-export type AppDispatch = typeof store.dispatch
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const useAppDispatch = () => useDispatch<AppDispatch>()
-export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
-export const sagaMiddleWate = createSagaMiddleware()
-export const store = configureStore({
-  reducer: {
-    search: searchSlice,
-    category: categorySlice,
-    tag: tagSlice,
+export const makeStore = () => configureStore({
+  reducer: {search, category, tag,
     [MusicApi.reducerPath]: MusicApi.reducer,
     [VideoUserApi.reducerPath]: VideoUserApi.reducer,
     [videoHostingApi.reducerPath]: videoHostingApi.reducer,
     [AuthApi.reducerPath]: AuthApi.reducer,
     [UserApi.reducerPath]: UserApi.reducer,
-    [AdminApi.reducerPath]: AdminApi.reducer,
-  },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(
-      videoHostingApi.middleware,
-      AuthApi.middleware,
-      UserApi.middleware,
-      VideoUserApi.middleware,
-      MusicApi.middleware,
-      AdminApi.middleware,
-      sagaMiddleWate
-    ),
+    [AdminApi.reducerPath]: AdminApi.reducer},
+  middleware: getDefault => getDefault().concat(videoHostingApi.middleware, AuthApi.middleware,
+    UserApi.middleware, VideoUserApi.middleware, MusicApi.middleware, AdminApi.middleware),
 })
-sagaMiddleWate.run(rootSaga)
+export type AppStore = ReturnType<typeof makeStore>
+export type RootState = ReturnType<AppStore['getState']>
+export type AppDispatch = AppStore['dispatch']
+export const useAppDispatch = () => useDispatch<AppDispatch>()
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector

@@ -1,10 +1,12 @@
 "use client"
+import { useCurrentUser } from '@/features/auth/use-current-user'
 
-import {ChangeEvent, useRef, useState} from "react"
+
+import {ChangeEvent, useEffect, useRef, useState} from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useGetVideosQuery } from "@/stores/slices/api"
-import { useCheckAuthQuery } from "@/stores/slices/regapi"
+
 import { useEditProfileMutation } from "@/stores/slices/user.api"
 import { scaleDiverging } from "d3-scale"
 import { useForm } from "react-hook-form"
@@ -32,7 +34,7 @@ import {IState} from "@/components/forms/createVideo/createVideo";
 import {api_url} from "@/domen.api";
 
 export default function IndexPage() {
-  const { data, isLoading, error } = useCheckAuthQuery({});
+  const { data, isLoading, error } = useCurrentUser();
   const [file, setFile] = useState<File>();
   const [EditProfile] = useEditProfileMutation();
   const [onDrag, setOnDrag] = useState<boolean>(false);
@@ -40,9 +42,7 @@ export default function IndexPage() {
   const [selectedFile, setSelectedFile] = useState<any>();
   const router = useRouter();
   const [state, setState] = useState<IState>({ loading: false, error: false, success: false });
-  if(error) {
-    router.push('/');
-  }
+
   const {
     register,
     control,
@@ -56,7 +56,7 @@ export default function IndexPage() {
       phone: data?.phone,
     }
   })
-  console.log(data)
+  useEffect(() => { if (data) reset({login: data.login, phone: data.phone || ''}) }, [data, reset])
   const uploadedFile = (file: any) => {
     const reader = new FileReader()
     reader.readAsDataURL(file)
@@ -89,7 +89,7 @@ export default function IndexPage() {
     setOnDrag(false)
   }
   const onSubmit = async (formData: IEditProfileInterface) => {
-    console.log(formData);
+
     // await EditProfile(formData);
     try {
       setState({error: false, loading: false, success: false});
@@ -107,6 +107,8 @@ export default function IndexPage() {
     }
 
   }
+  if (isLoading) return <p role="status">Загрузка профиля…</p>
+  if (!data || error) return <Link href="/authorization">Войдите, чтобы изменить профиль</Link>
   return (
     <div className={"w-full"}>
       {isLoading ? (
@@ -173,16 +175,16 @@ export default function IndexPage() {
               </Label>
               <Input
                 placeholder={'Введите пароль'}
-                {...register("password", { required: true })}
-                id={"name"}
+                {...register("password")}
+                type="password" autoComplete="new-password" id="password"
               />
               <Label className={"font-bold"} htmlFor={"oldPassword"}>
                 oldPassword
               </Label>
               <Input
                 placeholder={'Введите старый пароль'}
-                {...register("oldpassword", { required: true })}
-                id={"name"}
+                {...register("oldpassword")}
+                type="password" autoComplete="current-password" id="oldPassword"
               />
               <Label className={"font-bold"} htmlFor={"'phone'"}>
                 phone

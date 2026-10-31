@@ -3,7 +3,7 @@
 import {DetailedHTMLProps, HTMLAttributes, useEffect, useMemo, useRef, useState} from "react"
 import Image from "next/image"
 import { useGetVideosQuery } from "@/stores/slices/api"
-import { useCheckAuthQuery } from "@/stores/slices/regapi"
+
 import {
   useDeleteVideoMutation,
   useFollowChannelMutation,

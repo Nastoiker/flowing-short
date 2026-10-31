@@ -13,7 +13,6 @@ export const Categories = ({ className, ...props }: ICategoriesProps) => {
     dispatch(getFirstCategory())
   }, [dispatch])
   const category = useAppSelector((state) => state.category.category)
-  console.log(category)
   return (
     <div className={"space-y-5 py-5 border-b  border-r-0"}>
       <h1>Категории</h1>

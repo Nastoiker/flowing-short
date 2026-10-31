@@ -5,9 +5,7 @@ export interface IUser {
   authorUrl: string
   email: string
   login: string
-  phone: string
-  hashpassword: string
-  isActive: boolean
+  phone: string  isActive: boolean
   avatar: string
   role: string
   subscribers_count: number
@@ -77,9 +75,7 @@ export interface AuthorVideo {
   authorUrl: string
   email: string
   login: string
-  phone: string
-  hashpassword: string
-  isActive: boolean
+  phone: string  isActive: boolean
   avatar: string
   role: string
   subscribers_count: number
@@ -112,9 +108,7 @@ export interface WrittenBy {
   authorUrl: string
   email: string
   login: string
-  phone: string
-  hashpassword: string
-  isActive: boolean
+  phone: string  isActive: boolean
   avatar: string
   role: string
   subscribers_count: number
@@ -138,9 +132,7 @@ export interface User {
   authorUrl: string
   email: string
   login: string
-  phone: string
-  hashpassword: string
-  isActive: boolean
+  phone: string  isActive: boolean
   avatar: string
   role: string
   subscribers_count: number

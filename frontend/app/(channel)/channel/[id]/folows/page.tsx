@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { useCheckAuthQuery } from "@/stores/slices/regapi"
+
 
 import { IUser } from "@/types/User.interface"
 import { LayoutVideo } from "@/components/Layot.video"

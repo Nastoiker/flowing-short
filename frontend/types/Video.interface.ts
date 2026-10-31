@@ -24,7 +24,7 @@ export interface IVideo {
   comment_count: number
   likesCount: number
   userId: string
-  music: Music
+  music: Music | null
   tag: Tag[]
   authorVideo: AuthorVideo
   secondCategory: SecondCategory
@@ -60,9 +60,7 @@ export interface AuthorVideo {
   authorUrl: string
   email: string
   login: string
-  phone: string
-  hashpassword: string
-  isActive: boolean
+  phone: string  isActive: boolean
   avatar: string
   role: string
   subscribers_count: number

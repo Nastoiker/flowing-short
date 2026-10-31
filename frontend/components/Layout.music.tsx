@@ -1,7 +1,7 @@
 "use client"
 
 import {useCallback, useEffect, useMemo, useState} from "react"
-import { useCheckAuthQuery } from "@/stores/slices/regapi"
+
 import {useDeleteMusicMutation, useFollowsQuery} from "@/stores/slices/user.api"
 
 import { IMusic } from "@/types/Music.interface"
