@@ -1,19 +1,16 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { PrismaService } from './prisma/prisma-service';
+import { SensitiveFieldsInterceptor } from './security/sensitive-fields.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  app.enableCors({
-    origin: 'http://95.163.241.148:3000',
-    // origin: 'http://localhost:3000',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
-  });
-  await app.listen(8000);
-  const prismaService = app.get(PrismaService);
-
-  await prismaService.enableShutdownHooks(app);
+  app.disable('x-powered-by');
+  app.useGlobalInterceptors(new SensitiveFieldsInterceptor());
+  if (process.env.CORS_ORIGIN) {
+    app.enableCors({ origin: process.env.CORS_ORIGIN.split(','), credentials: true });
+  }
+  app.enableShutdownHooks();
+  await app.listen(Number(process.env.PORT || 8000), '0.0.0.0');
 }
-bootstrap();
+bootstrap().catch(() => { console.error('Application startup failed'); process.exit(1); });

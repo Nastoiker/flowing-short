@@ -1,0 +1,89 @@
+name: Production readiness
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - run: npm ci --prefix backend --no-audit --no-fund
+      - run: npm ci --prefix frontend --no-audit --no-fund
+      - run: npm exec --prefix backend -- prisma generate --schema backend/prisma/schema.prisma
+      - run: npm run typecheck --prefix backend
+      - run: npm run build --prefix backend
+      - run: npm run build --prefix frontend
+      - run: npm run typecheck --prefix frontend
+      - name: Unit tests
+        run: |
+          mkdir -p backend/test-results
+          npm test --prefix backend -- --runInBand --ci --json --outputFile=test-results/unit.json
+      - name: API integration with disposable SQLite
+        run: npm run test:integration --prefix backend -- --ci --json --outputFile=test-results/integration.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: unit-integration-results
+          path: backend/test-results/
+          retention-days: 7
+  browser-and-resilience:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      COMPOSE_PROJECT_NAME: flowing-short-test-ci
+      ALLOW_SYNTHETIC_TESTS: 'true'
+      PLAYWRIGHT_BASE_URL: http://127.0.0.1:13000
+      API_URL: http://127.0.0.1:18000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: node scripts/setup.mjs
+      - name: Build and start isolated application
+        run: docker compose -f compose.yaml -f compose.test.yaml up -d --build --wait --wait-timeout 240
+      - name: Seed twice without duplicates
+        run: docker compose -f compose.yaml -f compose.test.yaml exec -T backend node test/seed-idempotence.cjs
+      - run: npm ci --prefix frontend --no-audit --no-fund
+      - run: npx --prefix frontend playwright install --with-deps chromium
+      - name: Browser regression desktop and mobile
+        run: npm run test:e2e --prefix frontend
+      - name: Real Kafka event delivery
+        run: docker compose -f compose.yaml -f compose.test.yaml exec -T -e API_URL=http://127.0.0.1:8000 backend node --test test/kafka.integration.cjs
+      - name: Dependency failure and recovery
+        run: node scripts/test-health.mjs
+      - name: Collect container logs
+        if: always()
+        run: |
+          mkdir -p test-results
+          docker compose -f compose.yaml -f compose.test.yaml logs --no-color > test-results/containers.log 2>&1
+          docker compose -f compose.yaml -f compose.test.yaml ps -a > test-results/containers.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-resilience-results
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+            test-results/
+          retention-days: 7
+      - name: Remove disposable CI stack
+        if: always()
+        run: docker compose -f compose.yaml -f compose.test.yaml down -v

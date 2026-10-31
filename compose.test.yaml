@@ -1,0 +1,12 @@
+services:
+  backend:
+    environment:
+      NODE_ENV: test
+      DATABASE_URL: file:/app/backend/data/test.db
+      ALLOW_DEMO_SEED: 'true'
+      ALLOW_SYNTHETIC_TESTS: 'true'
+    ports:
+      - '127.0.0.1:${TEST_API_PORT:-18000}:8000'
+  frontend:
+    ports: !override
+      - '127.0.0.1:${TEST_APP_PORT:-13000}:3000'
