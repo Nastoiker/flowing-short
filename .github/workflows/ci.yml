@@ -97,3 +97,6 @@ jobs:
       - name: Remove disposable CI stack
         if: always()
         run: docker compose -f compose.yaml -f compose.test.yaml down -v
+  kubernetes:
+    needs: [checks, browser-and-resilience]
+    uses: ./.github/workflows/kubernetes.yml
