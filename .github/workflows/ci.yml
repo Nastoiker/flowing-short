@@ -23,6 +23,12 @@ jobs:
             frontend/package-lock.json
       - run: npm ci --prefix backend --no-audit --no-fund
       - run: npm ci --prefix frontend --no-audit --no-fund
+      - name: Validate client demo configuration without publishing a tunnel
+        run: |
+          node --check scripts/demo.mjs
+          docker compose -f compose.yaml -f compose.demo.yaml --profile share config --quiet
+        env:
+          JWT_SECRET: isolated-configuration-validation-only
       - run: npm exec --prefix backend -- prisma generate --schema backend/prisma/schema.prisma
       - run: npm run typecheck --prefix backend
       - run: npm run build --prefix backend

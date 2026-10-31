@@ -1,0 +1,16 @@
+# Dedicated client demo. Never combine with compose.test.yaml.
+services:
+  backend:
+    environment:
+      DATABASE_URL: file:/app/backend/data/demo.db
+  frontend:
+    ports: !override
+      - '127.0.0.1:${DEMO_PORT:-13010}:3000'
+  tunnel:
+    image: cloudflare/cloudflared@sha256:4955524aeaa379e154023d5a027c250f7b35041a2e7e950cf13f144bc9b9c5ba
+    profiles: [share]
+    restart: 'no'
+    command: ['tunnel', '--no-autoupdate', '--url', 'http://frontend:3000', '--protocol', 'http2']
+    depends_on:
+      frontend:
+        condition: service_healthy
