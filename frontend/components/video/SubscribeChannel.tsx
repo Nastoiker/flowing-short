@@ -55,8 +55,8 @@ export const SubscribeChannel = ({
             className={" bg-black bg-opacity-70  pr-3.5 rounded-3xl text-white"}
           >
             <HoverCard>
-              <HoverCardTrigger>
-                <Link
+              <HoverCardTrigger asChild>
+<Link
                   className={"flex items-center space-x-2"}
                   href={"/channel/" + video.authorVideo.id}
                 >
@@ -104,9 +104,8 @@ export const SubscribeChannel = ({
             className={" bg-black bg-opacity-70  pr-3.5 rounded-3xl text-white"}
           >
             <HoverCard>
-              <HoverCardTrigger>
-                {" "}
-                <Link
+              <HoverCardTrigger asChild>
+<Link
                   className={"flex items-center  space-x-2"}
                   href={"/channel/" + video.authorVideo.id}
                 >
