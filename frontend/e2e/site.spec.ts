@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test'
 test('catalog renders synthetic video without browser errors and fits viewport', async ({page}) => {
  const errors:string[]=[];page.on('pageerror', e=>errors.push(e.message))
  await page.goto('/')
+ await page.getByRole('link', {name:'logo',exact:true}).click()
  await expect(page.getByRole('heading',{name:'Рекомендации'})).toBeVisible()
  await expect(page.getByLabel('Synthetic demo', {exact:true})).toBeVisible()
  await expect(page.locator('video').first()).toBeVisible()
