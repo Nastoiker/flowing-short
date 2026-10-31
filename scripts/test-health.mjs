@@ -147,6 +147,16 @@ try {
   }, 45000);
   mustRestore = false;
   console.log('PASS: readiness recovers and the same pending event is acknowledged by Kafka');
+  compose('restart', '-t', '10', 'backend');
+  await eventually(() => probe('/health/ready', 200));
+  const login = await fetch(new URL('/auth/login', api), {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: `outage-${suffix}@example.invalid`, password: 'Synthetic-only-password-123!' }),
+    signal: AbortSignal.timeout(10000),
+  });
+  assert.equal(login.status, 200, 'Existing account must survive application restart and migrations');
+  assert.deepEqual(outboxState(user.id), [{ id: pending[0].id, published: true }]);
+  console.log('PASS: restart preserves the account and does not duplicate its outbox event');
 } finally {
   if (mustRestore) compose('start', 'kafka');
 }
