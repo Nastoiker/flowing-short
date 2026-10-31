@@ -1,18 +1,21 @@
 import * as request from 'supertest';
-import { Test } from '@nestjs/testing';
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import { INestApplication } from '@nestjs/common';
 import { SensitiveFieldsInterceptor } from '../src/security/sensitive-fields.interceptor';
 import { PrismaService } from '../src/prisma/prisma-service';
 import { sign } from 'jsonwebtoken';
+import { mkdirSync, writeFileSync, unlinkSync } from 'fs';
+import { randomUUID } from 'crypto';
+import { join } from 'path';
+import { path } from 'app-root-path';
 
 describe('API with isolated SQLite database', () => {
   let app: INestApplication, db: PrismaService, token: string, userId: string;
   const input = { email: 'integration@example.test', login: 'Integration user', hashpassword: 'IntegrationPassword123!' };
   beforeAll(async () => {
     if (process.env.NODE_ENV !== 'test' || !process.env.DATABASE_URL?.includes('flowing-short-test-')) throw new Error('Refusing non-isolated database');
-    const module = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = module.createNestApplication();
+    app = await NestFactory.create(AppModule, { logger: false });
     app.useGlobalInterceptors(new SensitiveFieldsInterceptor());
     await app.init();
     db = app.get(PrismaService);
@@ -50,8 +53,34 @@ describe('API with isolated SQLite database', () => {
     await db.secondLevelCategory.create({ data: { id: 'integration-shorts', name: 'Shorts', alias: 'shorts', firstLevelId: 'integration-category' } });
     await db.video.create({ data: { id: 'other-video', name: 'Other video', alias: 'other-video', Title: 'Other', Description: '', isActive: true, duration: 1, embed_link: '/other.mp4', embed_html: '', share_url: '', cover_image_url: '', Type: 'video', width: 180, height: 320, userId: 'other-author', secondCategoryId: 'integration-shorts' } });
     await request(app.getHttpServer()).delete('/user/deleteVideo/other-video').set('Authorization','Bearer '+token).expect(403);
+    await request(app.getHttpServer()).delete('/Video/other-video').set('Authorization','Bearer '+token).expect(403);
+    await request(app.getHttpServer()).patch('/Video/other-video').set('Authorization','Bearer '+token).send({ name: 'hijack' }).expect(403);
     expect(await db.video.count()).toBe(1);
     await request(app.getHttpServer()).post('/user/updateAvatar').set('Authorization','Bearer '+token).attach('file', Buffer.alloc(5 * 1024 * 1024 + 1), { filename: 'large.png', contentType: 'image/png' }).expect(413);
+  });
+  it('accepts a bounded image upload through the updated multipart parser', async () => {
+    const response = await request(app.getHttpServer()).post('/user/updateAvatar').set('Authorization', 'Bearer '+token)
+      .attach('file', Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+kGoYAAAAASUVORK5CYII=', 'base64'), { filename: 'avatar.png', contentType: 'image/png' }).expect(201);
+    expect(response.body.avatar).toMatch(/^\/uploads\/users\//);
+    const saved = await db.userModel.findUniqueOrThrow({ where: { id: userId } });
+    expect(saved.avatar).toBe(response.body.avatar);
+    unlinkSync(join(path, saved.avatar));
+  });
+  it('serves public media without authentication and keeps missing media private', async () => {
+    const filename = 'test-media-' + randomUUID() + '.mp4';
+    const folder = join(path, 'uploads');
+    mkdirSync(folder, { recursive: true });
+    writeFileSync(join(folder, filename), Buffer.from('synthetic media fixture'));
+    try {
+      const response = await request(app.getHttpServer()).get('/media/' + filename);
+      expect(response.status).toBe(200);
+      expect(response.headers['content-type']).toMatch(/video\/mp4/);
+      expect(Buffer.from(response.body).toString()).toBe('synthetic media fixture');
+      await request(app.getHttpServer()).get('/media/' + filename).set('Range', 'bytes=0-8').expect(206);
+      const missing = await request(app.getHttpServer()).get('/media/missing-' + filename).expect(404);
+      expect(missing.text).not.toContain('node_modules');
+      expect(missing.text).not.toContain(path);
+    } finally { unlinkSync(join(folder, filename)); }
   });
   it('never exposes password hashes or repository source files', async () => {
     const response = await request(app.getHttpServer()).get('/user').expect(200);

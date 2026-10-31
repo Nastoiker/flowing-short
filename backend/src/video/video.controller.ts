@@ -3,6 +3,7 @@ import { IdValidationpipe } from 'src/pipes/idValidation.pipe';
 import * as ffmpeg from 'fluent-ffmpeg';
 import {
   BadRequestException,
+  ForbiddenException,
   Body,
   Controller,
   Delete,
@@ -18,6 +19,8 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { VideoByIdNotFount, VideoIdNotFoundForUpd } from './video.constants';
 import { VideoModel } from './video.model';
@@ -25,7 +28,8 @@ import { createVideoDto } from './dto/create-video.dto';
 import { VideoService } from './video-service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { path } from 'app-root-path';
-import { writeFile } from 'fs-extra';
+import { writeFile, ensureDir } from 'fs-extra';
+import { randomUUID } from 'crypto';
 import { UserService } from '../user/user.service';
 import { MusicService } from '../music/music.service';
 
@@ -39,7 +43,7 @@ export class VideoController {
   // @UseGuards(JwtAuthGuard)
   @UseGuards(JwtAuthGuard)
   @Post('create')
-  @UseInterceptors(FileInterceptor('files'))
+  @UseInterceptors(FileInterceptor('files', { limits: { fileSize: 50 * 1024 * 1024 } }))
   async create(
     @Req() request,
     @UploadedFile(
@@ -65,6 +69,8 @@ export class VideoController {
     const inputPath = video.path;
     const outputPath = `${inputPath}.mp4`;
     const UploadFolder = `${path}/uploads/videos`;
+    await ensureDir(UploadFolder);
+    video.originalname = `${randomUUID()}.mp4`;
     await writeFile(`${UploadFolder}/${video.originalname}`, video.buffer);
     const videopath = `${UploadFolder}/${video.originalname}`;
     // возвращаем URL конвертированного файла
@@ -159,21 +165,26 @@ export class VideoController {
   }
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  async delete(@Param('id', IdValidationpipe) id: string) {
-    const deletedProduct = await this.videoService.deleteVideo(id);
+  async delete(@Req() request, @Param('id', IdValidationpipe) id: string) {
+    const deletedProduct = await this.videoService.deleteVideo(id, request.user.id);
     if (!deletedProduct) {
       throw new NotFoundException(VideoByIdNotFount);
     }
   }
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
   async patch(
+    @Req() request,
     @Param('id', IdValidationpipe) id: string,
     @Body() dto: VideoModel,
   ) {
+    const existing = await this.videoService.video({ id });
+    if (!existing) throw new NotFoundException();
+    if (existing.userId !== request.user.id) throw new ForbiddenException();
     const UpdatedProduct = await this.videoService.updateVideo({
       where: { id },
-      data: dto,
+      data: { name: dto.name, Title: dto.Title, Description: dto.Description },
     });
     if (!UpdatedProduct) {
       throw new NotFoundException(VideoIdNotFoundForUpd);

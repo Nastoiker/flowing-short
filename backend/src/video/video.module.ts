@@ -12,7 +12,7 @@ import { MusicService } from '../music/music.service';
   imports: [
     ServeStaticModule.forRoot({
       rootPath: `${path}/uploads`,
-      serveRoot: '/video',
+      serveRoot: '/media',
       serveStaticOptions: { dotfiles: 'deny', index: false },
     }),
   ],

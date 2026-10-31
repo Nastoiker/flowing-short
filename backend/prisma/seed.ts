@@ -22,7 +22,7 @@ export async function seed() {
   await prisma.video.upsert({ where: { id: 'demo-video' }, update: {}, create: {
     id: 'demo-video', name: 'Synthetic demo', alias: 'demo-video', Title: 'Synthetic demo',
     Description: 'Synthetic local test video', isActive: true, duration: 2,
-    embed_link: '/demo.mp4', embed_html: '', share_url: '', cover_image_url: '/video/demo.svg',
+    embed_link: '/demo.mp4', embed_html: '', share_url: '', cover_image_url: '/media/demo.svg',
     Type: 'video', width: 180, height: 320, userId: user.id, secondCategoryId: 'demo-shorts',
   } });
   await prisma.tag.upsert({ where: { name: '#demo' }, update: {}, create: { id: 'demo-tag', name: '#demo' } });
