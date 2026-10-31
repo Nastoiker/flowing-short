@@ -45,7 +45,9 @@ export COMPOSE_PROJECT_NAME=flowing-short-test ALLOW_SYNTHETIC_TESTS=true API_UR
 node scripts/test-health.mjs
 ```
 
-Последний тест временно ломает доступ к таблице тестовой SQLite и останавливает Kafka, проверяет HTTP 503 и восстановление. Он отказывается работать с другим Compose-проектом или рабочей БД. При аварийном завершении смотрите сообщения о восстановлении и `docker compose ... start kafka`.
+Последний тест временно ломает доступ к таблице тестовой SQLite и останавливает Kafka, проверяет HTTP 503, восстановление, доставку накопленного события и сохранность аккаунта после перезапуска. Он отказывается работать с другим Compose-проектом или рабочей БД. При аварийном завершении смотрите сообщения о восстановлении и `docker compose ... start kafka`.
+
+На 31.10.2026 `npm audit --omit=dev`: frontend — 0 предупреждений; backend — 0 critical/high, 8 moderate в Nest 9/UUID. Обновление этих major-версий остаётся отдельной задачей. Runtime-образ не содержит TypeScript, Jest, ts-node и Nest CLI.
 
 ## Health checks и Kafka
 
