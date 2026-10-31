@@ -88,7 +88,7 @@ export const VideoPreview = ({
       setTimeout(() => resolve(""), 1000)
     })
   }
-  const videoPath = `${api_url}/video` + video.embed_link
+  const videoPath = `${api_url}/media` + video.embed_link
   return (
     <div className={className}>
       <div className={"sm:flex justify-center"}>

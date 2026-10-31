@@ -4,7 +4,7 @@ test('catalog renders synthetic video without browser errors and fits viewport',
  const errors:string[]=[];page.on('pageerror', e=>errors.push(e.message))
  await page.goto('/')
  await expect(page.getByRole('heading',{name:'Рекомендации'})).toBeVisible()
- await expect(page.getByText('Synthetic demo', {exact:true})).toBeVisible()
+ await expect(page.getByLabel('Synthetic demo', {exact:true})).toBeVisible()
  await expect(page.locator('video').first()).toBeVisible()
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth)).toBe(true)
  expect(errors).toEqual([])
@@ -13,10 +13,10 @@ test('catalog renders synthetic video without browser errors and fits viewport',
 test('API failure displays retry and recovers', async ({page}) => {
  await page.route('**/api/Video/', route=>route.fulfill({status:503,contentType:'application/json',body:'{"message":"unavailable"}'}))
  await page.goto('/')
- await expect(page.getByRole('alert')).toContainText('Не удалось загрузить видео')
+ await expect(page.getByRole('main').getByRole('alert')).toContainText('Не удалось загрузить видео')
  await page.unroute('**/api/Video/')
  await page.getByRole('button',{name:'Повторить',exact:true}).click()
- await expect(page.getByText('Synthetic demo',{exact:true})).toBeVisible()
+ await expect(page.getByLabel('Synthetic demo',{exact:true})).toBeVisible()
 })
 
 test('login does not submit on load and validates input', async ({page}) => {
@@ -37,10 +37,10 @@ test('login handles wrong password and API failure', async ({page}) => {
  await page.getByLabel('Email',{exact:true}).fill('demo@example.test')
  await page.getByLabel('Пароль',{exact:true}).fill('WrongPassword123!')
  await page.getByRole('button',{name:'Войти',exact:true}).click()
- await expect(page.getByRole('alert')).toHaveText('Неверный email или пароль')
+ await expect(page.getByRole('main').getByRole('alert')).toHaveText('Неверный email или пароль')
  await page.route('**/api/auth/login',r=>r.abort())
  await page.getByRole('button',{name:'Войти',exact:true}).click()
- await expect(page.getByRole('alert')).toContainText('Сервис временно недоступен')
+ await expect(page.getByRole('main').getByRole('alert')).toContainText('Сервис временно недоступен')
  await expect(page).toHaveURL(/authorization$/)
 })
 
@@ -56,7 +56,7 @@ test('registration validates confirmation, handles refusal, then logs in', async
  await page.getByLabel('Повторите пароль',{exact:true}).fill('TestPassword123!')
  await page.route('**/api/auth/register',r=>r.fulfill({status:503,body:'{}',contentType:'application/json'}))
  await page.getByRole('button',{name:'Создать аккаунт',exact:true}).click()
- await expect(page.getByRole('alert')).toContainText('Не удалось создать аккаунт')
+ await expect(page.getByRole('main').getByRole('alert')).toContainText('Не удалось создать аккаунт')
  await expect(page).toHaveURL(/registration$/)
  await page.unroute('**/api/auth/register')
  await page.getByRole('button',{name:'Создать аккаунт',exact:true}).click()
@@ -66,7 +66,7 @@ test('registration validates confirmation, handles refusal, then logs in', async
  await page.getByRole('button',{name:'Войти',exact:true}).click()
  await expect(page).toHaveURL(/\/$/)
  await expect.poll(()=>page.evaluate(()=>localStorage.getItem('token'))).toBeTruthy()
- await expect(page.getByText('Synthetic demo',{exact:true})).toBeVisible()
+ await expect(page.getByLabel('Synthetic demo',{exact:true})).toBeVisible()
 })
 
 test('video plays and search works after direct navigation and reload', async ({page}) => {
@@ -80,8 +80,8 @@ test('video plays and search works after direct navigation and reload', async ({
  await page.getByRole('searchbox',{name:'Поиск видео'}).fill('Synthetic')
  await page.getByRole('searchbox',{name:'Поиск видео'}).press('Enter')
  await expect(page).toHaveURL(/founded\/Synthetic$/)
- await expect(page.getByText('Synthetic demo',{exact:true})).toBeVisible()
+ await expect(page.getByLabel('Synthetic demo',{exact:true})).toBeVisible()
  await page.reload()
- await expect(page.getByText('Synthetic demo',{exact:true})).toBeVisible()
+ await expect(page.getByLabel('Synthetic demo',{exact:true})).toBeVisible()
  expect(errors).toEqual([])
 })

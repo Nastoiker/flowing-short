@@ -173,7 +173,7 @@ export const Video = ({
       setTimeout(() => resolve(""), 1000)
     })
   }
-  const videoPath = `${api_url}/video` + video.embed_link
+  const videoPath = `${api_url}/media` + video.embed_link
   return (
     <div className={cn(className, 'md:flex')}>
       <div className={"flex justify-center"}>
