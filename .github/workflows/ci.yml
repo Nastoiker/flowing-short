@@ -23,6 +23,8 @@ jobs:
             frontend/package-lock.json
       - run: npm ci --prefix backend --no-audit --no-fund
       - run: npm ci --prefix frontend --no-audit --no-fund
+      - name: Local demo admin API and command safety
+        run: node --test tools/local-admin/admin.test.mjs
       - name: Enforce domain and application dependency boundaries
         run: |
           node --test scripts/check-boundaries.test.mjs
@@ -75,6 +77,8 @@ jobs:
         run: docker compose -f compose.yaml -f compose.test.yaml exec -T backend node test/seed-idempotence.cjs
       - run: npm ci --prefix frontend --no-audit --no-fund
       - run: npx --prefix frontend playwright install --with-deps chromium
+      - name: Local demo admin desktop and mobile
+        run: node --test tools/local-admin/browser.test.mjs
       - name: Browser regression desktop and mobile
         run: npm run test:e2e --prefix frontend
       - name: Real Kafka event delivery
