@@ -1,0 +1,32 @@
+name: Kubernetes smoke
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  kind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build and deploy to an isolated kind cluster
+        run: node scripts/k8s.mjs start
+      - name: Real Kafka and durable storage smoke
+        run: node scripts/k8s.mjs test
+      - name: Collect Kubernetes diagnostics
+        if: always()
+        run: |
+          if [ -f .runtime/k8s/kubeconfig ]; then node scripts/k8s.mjs diagnostics; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kubernetes-diagnostics
+          path: test-results/kubernetes/
+          retention-days: 7
+      - name: Delete only the disposable kind cluster
+        if: always()
+        run: |
+          if [ -f .runtime/k8s/owned-cluster ]; then node scripts/k8s.mjs stop; fi

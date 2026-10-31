@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector: { app: backend }
+  ports:
+    - { name: http, port: 8000 }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: backend
+spec:
+  # SQLite and the local outbox worker require exactly one instance.
+  serviceName: backend-headless
+  replicas: 1
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  selector:
+    matchLabels: { app: backend }
+  template:
+    metadata:
+      labels: { app: backend }
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 40
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      initContainers:
+        - name: kafka-topics
+          image: apache/kafka:3.9.1
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          command: [sh, -ec]
+          env:
+            - { name: KAFKA_HEAP_OPTS, value: '-Xms32m -Xmx64m' }
+          args:
+            - |
+              printf 'request.timeout.ms=3000\ndefault.api.timeout.ms=5000\n' > /tmp/client.properties
+              attempts=0
+              until /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --command-config /tmp/client.properties --list; do
+                attempts=$((attempts+1))
+                [ "$attempts" -lt 30 ] || exit 1
+                sleep 3
+              done
+              /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --command-config /tmp/client.properties --create --if-not-exists --topic flowing.user.registered.v1 --partitions 1 --replication-factor 1
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: '1', memory: 384Mi }
+      containers:
+        - name: backend
+          image: flowing-short-backend:k8s
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          ports:
+            - { name: http, containerPort: 8000 }
+          env:
+            - { name: NODE_ENV, value: production }
+            - { name: DATABASE_URL, value: 'file:/app/backend/data/k8s-demo.db' }
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef: { name: application, key: JWT_SECRET }
+            - { name: KAFKA_BROKERS, value: 'kafka:9092' }
+            - { name: KAFKA_TOPIC, value: flowing.user.registered.v1 }
+            - { name: EMAIL_ENABLED, value: 'false' }
+            - { name: TELEGRAM_ENABLED, value: 'false' }
+          volumeMounts:
+            - { name: database, mountPath: /app/backend/data }
+            - { name: uploads, mountPath: /app/backend/uploads }
+            - { name: temporary, mountPath: /tmp }
+            - { name: npm-cache, mountPath: /home/node/.npm }
+          resources:
+            requests: { cpu: 250m, memory: 256Mi }
+            limits: { cpu: '1', memory: 768Mi }
+          startupProbe:
+            httpGet: { path: /health/live, port: http }
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 36
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+      volumes:
+        - { name: temporary, emptyDir: {} }
+        - { name: npm-cache, emptyDir: {} }
+  volumeClaimTemplates:
+    - metadata: { name: database }
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: { storage: 2Gi }
+    - metadata: { name: uploads }
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: { storage: 2Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-headless
+spec:
+  clusterIP: None
+  selector: { app: backend }
+  ports:
+    - { name: http, port: 8000 }
