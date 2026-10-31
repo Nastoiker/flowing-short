@@ -12,7 +12,7 @@ export default function RootLayout({children}:{children:React.ReactNode}) {
         <div className="min-h-screen bg-background font-sans antialiased">
           <header className="fixed inset-x-0 top-0 z-50"><Header/></header>
           <LeftSite className="MainLayout"/>
-          <div className="mx-auto max-w-screen-2xl px-3 pb-12 pt-24 md:pl-56 md:pr-8">{children}</div>
+          <div className="mx-auto max-w-screen-2xl px-3 pb-12 pt-32 md:pl-56 md:pr-8 md:pt-24">{children}</div>
           <Up/>
         </div>
       </Providers>

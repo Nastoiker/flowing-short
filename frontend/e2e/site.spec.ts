@@ -8,6 +8,11 @@ test('catalog renders synthetic video without browser errors and fits viewport',
  await expect(page.getByLabel('Synthetic demo', {exact:true})).toBeVisible()
  await expect(page.locator('video').first()).toBeVisible()
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+ const menu=page.getByRole('button',{name:'Открыть категории'})
+ if(await menu.isVisible()) {
+  const toggle=await menu.boundingBox(), content=await page.getByRole('main').boundingBox()
+  expect(content!.y).toBeGreaterThanOrEqual(toggle!.y+toggle!.height)
+ }
  expect(errors).toEqual([])
 })
 
@@ -86,7 +91,7 @@ test('video plays and search works after direct navigation and reload', async ({
  await expect(page.getByLabel('Synthetic demo',{exact:true})).toBeVisible()
  if (info.project.name === 'mobile') await page.getByRole('button', {name: 'Открыть категории'}).first().click()
  await page.getByText('Demo', {exact:true}).click()
- await page.getByText('Shorts', {exact:true}).click()
+ await page.getByRole('link', {name:'Shorts', exact:true}).click()
  await expect(page).toHaveURL(/category\/shorts$/)
  await expect(page.getByLabel('Synthetic demo',{exact:true})).toBeVisible()
  expect(errors).toEqual([])
