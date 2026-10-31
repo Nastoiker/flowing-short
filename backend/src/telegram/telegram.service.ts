@@ -10,9 +10,10 @@ export class TelegramService {
   options: ITelegramOptions;
   constructor(@Inject(TELEGRAM_MODULE_OPTIONS) _options: ITelegramOptions) {
     this.options = _options;
-    this.bot = new Telegraf(_options.token);
+    if (process.env.TELEGRAM_ENABLED === 'true' && process.env.NODE_ENV !== 'test') this.bot = new Telegraf(_options.token);
   }
   async sendMessage(message: string, chatId: string = this.options.chatId) {
+    if (!this.bot) return;
     await this.bot.telegram.sendMessage(chatId, message);
   }
 }

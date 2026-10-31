@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
 import {
   Comment,
@@ -9,7 +9,9 @@ import {
   Video,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma-service';
-import { unlink, writeFile } from 'fs-extra';
+import { ensureDir, writeFile } from 'fs-extra';
+import { compare, hash } from 'bcryptjs';
+import { randomUUID } from 'crypto';
 import { path } from 'app-root-path';
 import { Tag } from '../video/entities/video.entity';
 import { CreateCommentDto } from './dto/createComment-dto';
@@ -227,31 +229,15 @@ export class UserService {
   }
 
   async updateAvatar(user: UserModel, file: Express.Multer.File) {
-    if (user.avatar && user.avatar.length > 0) {
-      await unlink(path + user.avatar);
+    if (!file || !['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
+      throw new BadRequestException('Upload a JPEG, PNG or WebP image');
     }
-    const extension = file.originalname.split('.');
-    const filePath =
-      path +
-      '/uploads/users/' +
-      user.id +
-      '/avatar/' +
-      user.id +
-      '.' +
-      extension[extension.length - 1];
-    await writeFile(filePath, file.buffer);
-    return this.prisma.userModel.update({
-      where: { id: user.id },
-      data: {
-        avatar:
-          '/uploads/users/' +
-          user.id +
-          '/avatar/' +
-          user.id +
-          '.' +
-          extension[extension.length - 1],
-      },
-    });
+    const extension = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[file.mimetype];
+    const folder = '/uploads/users/' + user.id + '/avatar';
+    await ensureDir(path + folder);
+    const avatar = folder + '/' + randomUUID() + '.' + extension;
+    await writeFile(path + avatar, file.buffer);
+    return this.prisma.userModel.update({ where: { id: user.id }, data: { avatar } });
   }
   async foundUser(login: string): Promise<UserModel[]> {
     return this.prisma.userModel.findMany({
@@ -276,39 +262,16 @@ export class UserService {
       orderBy,
     });
   }
-  async updateProfile(
-    user: UserModel,
-    file: Express.Multer.File,
-    update: UpdateUserDto,
-  ) {
-    if (user.avatar && user.avatar.length > 0) {
-      await unlink(path + user.avatar);
+  async updateProfile(user: UserModel, file: Express.Multer.File | undefined, update: UpdateUserDto) {
+    const data: Prisma.UserModelUpdateInput = { login: update.login, phone: update.phone };
+    if (update.password) {
+      if (!update.oldpassword || !(await compare(update.oldpassword, user.hashpassword))) {
+        throw new UnauthorizedException('Current password is incorrect');
+      }
+      data.hashpassword = await hash(update.password, 10);
     }
-    const extension = file.originalname.split('.');
-    const filePath =
-      path +
-      '/uploads/users/' +
-      user.id +
-      '/avatar/' +
-      user.id +
-      '.' +
-      extension[extension.length - 1];
-    await writeFile(filePath, file.buffer);
-    return this.prisma.userModel.update({
-      where: { id: user.id },
-      data: {
-        login: update.login,
-        phone: update.phone,
-        hashpassword: update.password,
-        avatar:
-          '/uploads/users/' +
-          user.id +
-          '/avatar/' +
-          user.id +
-          '.' +
-          extension[extension.length - 1],
-      },
-    });
+    if (file) await this.updateAvatar(user, file);
+    return this.prisma.userModel.update({ where: { id: user.id }, data });
   }
   async createUser(data: Prisma.UserModelCreateInput): Promise<UserModel> {
     return this.prisma.userModel.create({
@@ -331,6 +294,9 @@ export class UserService {
     return this.prisma.tag.create({ data: { name } });
   }
   async unfollowChannel(id: string, userId: string, authorId: string) {
+    const existing = await this.prisma.folower.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException();
+    if (existing.userId !== userId || existing.authorId !== authorId) throw new ForbiddenException();
     const folow = await this.prisma.folower.delete({
       where: {
         id,

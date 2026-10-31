@@ -9,7 +9,7 @@ describe('ConvertVideoController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ConvertVideoController],
       providers: [ConvertVideoService],
-    }).compile();
+    }).useMocker(() => ({})).compile();
 
     controller = module.get<ConvertVideoController>(ConvertVideoController);
   });

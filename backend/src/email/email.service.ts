@@ -14,6 +14,7 @@ export class EmailService {
     return 'This action adds a new email';
   }
   async sendEmailIsExist(user: UserModel, token: string) {
+    if (process.env.NODE_ENV === 'test' || process.env.EMAIL_ENABLED !== 'true') return;
     await this.mailerService.sendMail({
       to: user.email,
       // from: '"Support Team" <support@example.com>', // override default from

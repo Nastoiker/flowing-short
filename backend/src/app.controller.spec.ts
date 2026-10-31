@@ -9,7 +9,7 @@ describe('AppController', () => {
     app = await Test.createTestingModule({
       controllers: [AppController],
       providers: [AppService],
-    }).compile();
+    }).useMocker(() => ({})).compile();
   });
 
   describe('getHello', () => {

@@ -9,7 +9,7 @@ describe('CommentController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CommentController],
       providers: [CommentService],
-    }).compile();
+    }).useMocker(() => ({})).compile();
 
     controller = module.get<CommentController>(CommentController);
   });

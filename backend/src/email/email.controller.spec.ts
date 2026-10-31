@@ -9,7 +9,7 @@ describe('EmailController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [EmailController],
       providers: [EmailService],
-    }).compile();
+    }).useMocker(() => ({})).compile();
 
     controller = module.get<EmailController>(EmailController);
   });

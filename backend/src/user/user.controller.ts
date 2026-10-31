@@ -14,6 +14,9 @@ import {
   Query,
   Req,
   BadRequestException,
+  ForbiddenException,
+  UsePipes,
+  ValidationPipe,
   NotFoundException,
   UploadedFiles,
 } from '@nestjs/common';
@@ -37,7 +40,8 @@ import { MusicService } from '../music/music.service';
 import { CreateMusicDto } from '../music/dto/create-music.dto';
 import { createVideoDto } from '../video/dto/create-video.dto';
 import { path } from 'app-root-path';
-import { writeFile } from 'fs-extra';
+import { writeFile, ensureDir } from 'fs-extra';
+import { randomUUID } from 'crypto';
 import * as ffmpeg from 'fluent-ffmpeg';
 import multer from 'multer';
 import {VideoReportDto} from "../video/dto/report-video.dto";
@@ -58,15 +62,13 @@ export class UserController {
   // }
   @UseGuards(JwtAuthGuard)
   @Post('createMusic')
-  @UseInterceptors(AnyFilesInterceptor())
+  @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: 20 * 1024 * 1024, files: 2 } }))
   createMusic(
     @Req() query,
     @UploadedFiles() files: Array<Express.Multer.File>,
     @Body() createMusicDto: CreateMusicDto,
   ) {
-    console.log('user' + query.user);
     createMusicDto.userId = query.user.id;
-    console.log(files);
     return this.musicService.create(files[0], files[1], createMusicDto);
   }
 
@@ -131,7 +133,7 @@ export class UserController {
   }
   @Post('updateAvatar')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
   async updateAvatar(
     @Req() query,
     @UploadedFile(
@@ -146,19 +148,15 @@ export class UserController {
     return this.userService.updateAvatar(query.user, avatar);
   }
   @Patch('updateProfile')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
   async updateProfile(
     @Req() query,
-    @UploadedFile(
-      new ParseFilePipeBuilder().build({
-        errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
-      }),
-    )
+    @UploadedFile()
     avatar: Express.Multer.File,
     @Body() body: UpdateUserDto,
   ) {
-    console.log(body);
     return this.userService.updateProfile(query.user, avatar, body);
   }
   @Get()
@@ -184,8 +182,8 @@ export class UserController {
   }
   @UseGuards(JwtAuthGuard)
   @Post('ReportOnVideo')
-  async reportOnVideo(@Body() dto: VideoReportDto) {
-    console.log(dto);
+  async reportOnVideo(@Req() request, @Body() dto: VideoReportDto) {
+    dto.userId = request.user.id;
     const reportVideo = await this.videoService.reportVideo(dto);
     if (!reportVideo) {
       throw new NotFoundException(VideoIdNotFoundForUpd);
@@ -203,25 +201,30 @@ export class UserController {
     return this.userService.unfollowChannel(id, userId, authorId);
   }
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.updateUser({ where: { id }, data: updateUserDto });
+  @UseGuards(JwtAuthGuard)
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  update(@Req() request, @Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    if (request.user.id !== id) throw new ForbiddenException();
+    return this.userService.updateProfile(request.user, undefined, updateUserDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  @UseGuards(JwtAuthGuard)
+  remove(@Req() request, @Param('id') id: string) {
+    if (request.user.id !== id) throw new ForbiddenException();
     return this.userService.deleteUser({ id });
   }
   @Delete('/deleteVideo/:id')
   @UseGuards(JwtAuthGuard)
-  DeleteVideo(@Param('id') id: string) {
-    const videoId = id.slice(1, id.length);
-    return this.videoService.deleteVideo(videoId);
+  DeleteVideo(@Req() request, @Param('id') id: string) {
+    const videoId = id.replace(/^:/, '');
+    return this.videoService.deleteVideo(videoId, request.user.id);
   }
   @Delete('/deleteMusic/:id')
   @UseGuards(JwtAuthGuard)
-  DeleteMusic(@Param('id') id: string) {
-    const musicId = id.slice(1, id.length);
-    return this.videoService.deleteMusic(musicId);
+  DeleteMusic(@Req() request, @Param('id') id: string) {
+    const musicId = id.replace(/^:/, '');
+    return this.videoService.deleteMusic(musicId, request.user.id);
   }
   @UseGuards(JwtAuthGuard)
   @Post('createCommentOnUser')
@@ -244,7 +247,7 @@ export class UserController {
   }
   @UseGuards(JwtAuthGuard)
   @Post('createVideo')
-  @UseInterceptors(FileInterceptor('files'))
+  @UseInterceptors(FileInterceptor('files', { limits: { fileSize: 50 * 1024 * 1024 } }))
   async createVideo(
     @Req() request,
     @UploadedFile(
@@ -265,15 +268,14 @@ export class UserController {
     if (video.mimetype !== 'video/mp4') {
       throw new BadRequestException('Only MP4 videos are allowed.');
     }
-    console.log(dto);
     dto.userId = request.user.id;
     const inputPath = video.path;
     const outputPath = `${inputPath}.mp4`;
     const UploadFolder = `${path}/uploads/videos`;
+    await ensureDir(`${UploadFolder}/converted`);
+    video.originalname = `${randomUUID()}.mp4`;
     await writeFile(`${UploadFolder}/${video.originalname}`, video.buffer);
     const videopath = `${UploadFolder}/${video.originalname}`;
-    console.log(videopath);
-    console.log('start convert');
     await new Promise((resolve, reject) => {
       ffmpeg(videopath)
         .output(UploadFolder + '/converted/' + video.originalname)
@@ -284,16 +286,13 @@ export class UserController {
         .autopad(true, 'black')
         .videoCodec('libx264')
         .on('end', () => {
-          console.log('file has been converted successfully');
-          resolve('');
+                resolve('');
         })
         .on('error', (err) => {
-          console.log(`an error happened: ${err.message}`);
-          reject(`an error happened: ${err.message}`);
+                reject(`an error happened: ${err.message}`);
         })
         .run();
     });
-    console.log('end convert');
 
     dto.embed_link = UploadFolder + '/converted/' + video.originalname;
     // возвращаем URL конвертированного файла

@@ -14,22 +14,20 @@ export class JwtStratagy extends PassportStrategy(Strategy) {
     super({
       passReqToCallback: true,
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      ignoreExpiration: true,
+      ignoreExpiration: false,
       secretOrKey: configService.get('JWT_SECRET'),
     });
   }
   async validate(request: Request, { email }: Pick<UserModel, 'email'>) {
-    console.log({ email });
     const user = await this.prisma.userModel.findUnique({
       where: { email },
     });
     // if(!user && !user.isActive) {
     //  throw   new UnauthorizedException();
     // }
-    if (!user) {
+    if (!user || !user.isActive) {
       throw new UnauthorizedException();
     }
-    console.log(user);
     return user;
   }
 }

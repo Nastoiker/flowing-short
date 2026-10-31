@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma-service';
 import {
   Prisma,
@@ -13,6 +13,7 @@ import { unlink, writeFile } from 'fs-extra';
 import { path } from 'app-root-path';
 import { VideoReportDto } from './dto/report-video.dto';
 import { mkdirSync } from 'fs';
+import { randomUUID } from 'crypto';
 import { SecondLevelCategory } from '../category/entities/category.entity';
 import * as ffmpeg from 'fluent-ffmpeg';
 import {ReportOnVideo, TagOnVideo} from './entities/video.entity';
@@ -233,9 +234,10 @@ export class VideoService {
     data: createVideoDto,
     videopath: string,
   ): Promise<Video> {
+    data.alias = randomUUID();
     const UploadFolder = `${path}/uploads/users/${data.userId}/video/${data.alias}`;
     setTimeout(() => {}, 100);
-    mkdirSync(`${UploadFolder}`);
+    mkdirSync(`${UploadFolder}`, { recursive: true });
     let { tagId, ...videoDto } = data;
     tagId = tagId.replace(' ', '');
     const strArr = tagId.split(',');
@@ -406,9 +408,10 @@ export class VideoService {
       include: { writtenBy: true, userComments: { include: { user: true } } },
     });
   }
-  async deleteMusic(id: string) {
+  async deleteMusic(id: string, ownerId?: string) {
     const music = await this.prisma.music.findUnique({ where: { id } });
-    const pathDelete = `uploads` + music.music_url;
+    if (!music) throw new NotFoundException();
+    if (ownerId && music.userId !== ownerId) throw new ForbiddenException();
     //  const deletePath = pathDelete.split('/')
     //  deletePath.pop();
     // const finishPath = deletePath.join('/');
@@ -418,9 +421,10 @@ export class VideoService {
       where: { id },
     });
   }
-  async deleteVideo(id: string) {
+  async deleteVideo(id: string, ownerId?: string) {
     const video = await this.prisma.video.findUnique({ where: { id } });
-    const pathDelete = `uploads` + video.embed_link;
+    if (!video) throw new NotFoundException();
+    if (ownerId && video.userId !== ownerId) throw new ForbiddenException();
     //  const deletePath = pathDelete.split('/')
     //  deletePath.pop();
     // const finishPath = deletePath.join('/');

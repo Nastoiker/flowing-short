@@ -13,6 +13,7 @@ import { MusicService } from '../music/music.service';
     ServeStaticModule.forRoot({
       rootPath: `${path}/uploads`,
       serveRoot: '/video',
+      serveStaticOptions: { dotfiles: 'deny', index: false },
     }),
   ],
   controllers: [VideoController],

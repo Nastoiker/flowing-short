@@ -1,36 +1,14 @@
 import { Module } from '@nestjs/common';
-import { EmailService } from './email.service';
-import { EmailController } from './email.controller';
 import { MailerModule } from '@nestjs-modules/mailer';
-import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
-import { doc } from 'prettier';
-import { join } from 'path';
+import { EmailService } from './email.service';
 @Module({
-  imports: [
-    MailerModule.forRoot({
-      // transport: 'smtps://user@example.com:topsecret@smtp.example.com',
-      // or
-      transport: {
-        host: 'smtp.example.com',
-        secure: false,
-        auth: {
-          user: 'user@example.com',
-          pass: 'topsecret',
-        },
-      },
-      defaults: {
-        from: '"No Reply" <noreply@example.com>',
-      },
-      template: {
-        dir: join(__dirname, 'templates'),
-        adapter: new HandlebarsAdapter(), // or new PugAdapter() or new EjsAdapter()
-        options: {
-          strict: true,
-        },
-      },
-    }),
-  ],
+  imports: [MailerModule.forRoot({
+    transport: process.env.EMAIL_ENABLED === 'true' && process.env.NODE_ENV !== 'test'
+      ? process.env.SMTP_URL
+      : { jsonTransport: true },
+    defaults: { from: process.env.SMTP_FROM || 'noreply@example.test' },
+  })],
   providers: [EmailService],
-  exports: [EmailService], // 👈 export for DI
+  exports: [EmailService],
 })
 export class EmailModule {}

@@ -11,8 +11,9 @@ import { MusicService } from '../music/music.service';
 @Module({
   imports: [
     ServeStaticModule.forRoot({
-      rootPath: `${path}`,
-      serveRoot: '/user',
+      rootPath: `${path}/uploads`,
+      serveRoot: '/user/uploads',
+      serveStaticOptions: { dotfiles: 'deny', index: false },
     }),
   ],
   controllers: [UserController],

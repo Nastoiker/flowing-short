@@ -1,32 +1,14 @@
-import {
-  IsBoolean,
-  IsEmail,
-  IsNumber,
-  IsOptional,
-  IsString,
-  ValidateNested,
-} from 'class-validator';
+import { IsEmail, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 export class CreateUserDto {
-  @IsString({ message: 'URL автора должен быть строкой' })
-  authorUrl: string;
-
-  @IsEmail()
+  @IsOptional() @IsString() @MaxLength(80)
+  authorUrl?: string;
+  @IsEmail() @MaxLength(254)
   email: string;
-
-  @IsString({ message: 'Логин должен быть строкой' })
+  @IsString() @Length(2, 80)
   login: string;
-  @IsString({ message: 'Роль должна быть строкой' })
-  role: 'user' | 'admin';
-  isActive: boolean;
-  following_count: number;
-  @IsOptional()
-  @IsString({ message: 'Номер телефона должен быть строкой' })
+  @IsOptional() @IsString() @MaxLength(30)
   phone?: string | null;
-
-  @IsString({ message: 'Хэш пароля должен быть строкой' })
+  // Legacy API field name: AuthService hashes this submitted password.
+  @IsString() @Length(8, 72)
   hashpassword: string;
-  LikeCount: number;
-  @IsOptional()
-  @IsString({ message: 'URL аватара должен быть строкой' })
-  avatar?: string | null;
 }

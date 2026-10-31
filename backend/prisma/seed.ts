@@ -1,145 +1,37 @@
-import { PrismaClient, Prisma } from '@prisma/client';
-
+import { PrismaClient } from '@prisma/client';
+import { hash } from 'bcryptjs';
+import { mkdir, writeFile } from 'fs/promises';
+import { execFileSync } from 'child_process';
+import { existsSync } from 'fs';
 const prisma = new PrismaClient();
-const Report: Prisma.ReportVideoCreateInput[] = [
-    {
-        code: '1',
-        message: 'Откровенный контен',
-    },
-    {
-        code: '2',
-        message: 'Насилие',
-    },
-    {
-        code: '3',
-        message: 'Издевательство над животными',
-    },
-    {
-        code: '4',
-        message: 'Оскорбление личности',
-    },
-    {
-        code: '5',
-        message: 'Запрещенный товар',
-    },
-];
-const tag: Prisma.TagCreateInput[] = [
-    {
-        name: 'Популярные',
-    },
-    {
-        name: 'Дешевые',
-    },
-    {
-        name: 'Беспроводные',
-    },
-    {
-        name: 'Скидка',
-    },
-    {
-        name: 'Новые',
-    },
-    {
-        name: 'Флагманы',
-    },
-];
-// const model: Prisma.ModelDeviceCreateInput[] = [
-// 	{
-// 		name: 'airDots',
-// 		secondCategoryId: ''
-// 		brandId: '',
-// 	},
-// 	{
-// 		name: 'LP40',
-// 		secondCategoryId: ''
-// 		brandId: '',
-// 	},
-// 	{
-// 		name: 'ENCO AIR 2',
-// 		secondCategoryId: ''
-// 		brandId: '',
-// 	},
-// 	{
-// 		name: 'airpods pro',
-// 		secondCategoryId: ''
-// 		brandId: '',
-// 	},
-// 	{
-// 		name: 'EHS64',
-// 		secondCategoryId: ''
-// 		brandId: '',
-// 	},
-// ];
-const firrtCategory: Prisma.FirstLevelCategoryCreateInput[] = [
-    {
-        name: 'Блоги',
-        alias: 'blogs',
-    },
-    {
-        name: 'Юмор',
-        alias: 'funny',
-    },
-    {
-        name: 'Животные',
-        alias: 'animals',
-    },
-];
-
-// const SecondCategory: Prisma.SecondLevelCategoryCreateInput[] = [
-// 	{
-// 		name: 'Наушники',
-// 		alias: 'headphones',
-// 		firstLevelId: '4d2f0720-d963-4ff4-8c95-8a4e111da430',
-// 	},
-// 	{
-// 		name: 'Повербанк',
-// 		alias: 'powerbank',
-// 		firstLevelId: '4d2f0720-d963-4ff4-8c95-8a4e111da430',
-// 	},
-// 	{
-// 		name: 'Телефоны',
-// 		alias: '',
-// 		firstLevelId: '4d2f0720-d963-4ff4-8c95-8a4e111da430',
-// 	},
-// ];
-// const userData: Prisma.SecondLevelCategoryCreateInput[] = [
-// 	{
-// 		id: 'Наушники',
-// 		firstLevelId: 1,
-// 	},
-// 	{
-// 		id: 'Повербанк',
-// 		firstLevelId: 1
-// 	},
-// 	{
-// 		id: 'Телефоны',
-// 		firstLevelId: 1,
-// 	},
-// ];c
-
-async function main() {
-    console.log(`Start seeding ...`);
-    for (const u of Report) {
-        const user = await prisma.reportVideo.create({
-            data: u,
-        });
-        console.log(`Created user with id: ${user.id}`);
-    }
-    for (const u of firrtCategory) {
-        const user = await prisma.firstLevelCategory.create({
-            data: u,
-        });
-        console.log(`Created user with id: ${user.id}`);
-    }
-    console.log(`Seeding finished.`);
+export async function seed() {
+  if (process.env.ALLOW_DEMO_SEED !== 'true' || process.env.NODE_ENV === 'production' || !/demo|test/i.test(process.env.DATABASE_URL || '')) {
+    throw new Error('Synthetic seed requires ALLOW_DEMO_SEED=true, a demo/test database, and non-production NODE_ENV');
+  }
+  await prisma.userModel.upsert({ where: { email: 'demo@example.test' }, update: {}, create: {
+    id: 'demo-user', email: 'demo@example.test', login: 'Demo creator', authorUrl: 'demo',
+    hashpassword: await hash('DemoPassword123!',10), avatar: '/uploads/demo.svg', role: 'user',
+  } });
+  const user = await prisma.userModel.findUniqueOrThrow({ where: { email: 'demo@example.test' } });
+  await prisma.firstLevelCategory.upsert({ where: { id: 'demo-category' }, update: {}, create: {
+    id: 'demo-category', name: 'Demo', alias: 'demo',
+  } });
+  await prisma.secondLevelCategory.upsert({ where: { id: 'demo-shorts' }, update: {}, create: {
+    id: 'demo-shorts', name: 'Shorts', alias: 'shorts', firstLevelId: 'demo-category',
+  } });
+  await prisma.video.upsert({ where: { id: 'demo-video' }, update: {}, create: {
+    id: 'demo-video', name: 'Synthetic demo', alias: 'demo-video', Title: 'Synthetic demo',
+    Description: 'Synthetic local test video', isActive: true, duration: 2,
+    embed_link: '/demo.mp4', embed_html: '', share_url: '', cover_image_url: '/video/demo.svg',
+    Type: 'video', width: 180, height: 320, userId: user.id, secondCategoryId: 'demo-shorts',
+  } });
+  await prisma.tag.upsert({ where: { name: '#demo' }, update: {}, create: { id: 'demo-tag', name: '#demo' } });
+  const tag = await prisma.tag.findUniqueOrThrow({ where: { name: '#demo' } });
+  await prisma.tagOnVideo.upsert({ where: { tagId_videoId: { tagId: tag.id, videoId: 'demo-video' } }, update: {}, create: { tagId: tag.id, videoId: 'demo-video' } });
+  await mkdir('uploads', { recursive: true });
+  if (!existsSync('uploads/demo.svg')) await writeFile('uploads/demo.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="180" height="320"><rect width="180" height="320" fill="#254e70"/><text x="30" y="160" fill="white">Synthetic demo</text></svg>');
+  if (!existsSync('uploads/demo.mp4')) execFileSync('ffmpeg', ['-hide_banner','-loglevel','error','-f','lavfi','-i','color=c=blue:s=180x320:d=2','-c:v','libx264','-pix_fmt','yuv420p','uploads/demo.mp4'], { timeout: 30000 });
 }
-
-main()
-    .then(async () => {
-        await prisma.$disconnect();
-    })
-    .catch(async (e) => {
-        console.error(e);
-        await prisma.$disconnect();
-        process.exit(1);
-    });
+if (require.main === module) seed().finally(() => prisma.$disconnect()).catch(() => {
+  console.error('Synthetic seed failed. Check demo/test database configuration and ffmpeg installation.'); process.exitCode = 1;
+});

@@ -1,5 +1,6 @@
 import {
   Controller,
+  BadRequestException,
   HttpCode,
   Post,
   UploadedFile,
@@ -7,7 +8,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { FileElementResponse } from './dto/fileElement.response';
 import { FilesService } from './files.service';
 import { MFile } from './mfile.class';
@@ -18,12 +19,13 @@ export class FilesController {
   @Post('upload')
   @HttpCode(200)
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('files'))
+  @UseInterceptors(FileInterceptor('files', { limits: { fileSize: 50 * 1024 * 1024 } }))
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
   ): Promise<FileElementResponse[]> {
+    if (!file) throw new BadRequestException('File required');
     const saveArray: MFile[] = [new MFile(file)];
-    if (file.mimetype.includes('video')) {
+    if (['image/jpeg','image/png','image/webp'].includes(file.mimetype)) {
       const buffer = await this.filesService.convertToWebp(file.buffer);
       saveArray.push(
         new MFile({

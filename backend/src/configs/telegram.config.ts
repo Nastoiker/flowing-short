@@ -5,8 +5,8 @@ export const getTelegramConfig = (
   configService: ConfigService,
 ): ITelegramOptions => {
   const token: undefined | string = configService.get('TELEGRAM_TOKEN');
-  if (!token) {
+  if (!token && process.env.TELEGRAM_ENABLED === 'true' && process.env.NODE_ENV !== 'test') {
     throw new Error('Telegram token not ainit');
   }
-  return { token, chatId: configService.get('CHAT_ID') ?? '' };
+  return { token: token || 'disabled', chatId: configService.get('CHAT_ID') ?? '' };
 };

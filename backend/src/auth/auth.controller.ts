@@ -21,11 +21,10 @@ import { JwtAuthGuard } from './guards/jwt.guard';
 export class AuthController {
   userService: any;
   constructor(private readonly authService: AuthService) {}
-  @UsePipes(new ValidationPipe())
+  @UsePipes(new ValidationPipe({ whitelist: true }))
   @HttpCode(200)
   @Post('register')
   async register(@Body() dto: CreateUserDto) {
-    console.log(dto);
     const oldUser = await this.authService.findUser(dto.email);
     if (oldUser) {
       throw new BadRequestException(ALREADY_REGISTER_ERROR);
@@ -33,19 +32,18 @@ export class AuthController {
     dto.authorUrl = dto.login;
     return this.authService.createUser(dto);
   }
-  @UsePipes(new ValidationPipe())
+  @UsePipes(new ValidationPipe({ whitelist: true }))
   @HttpCode(200)
   @Post('login')
   async login(@Body() { email, password }: AuthDto) {
     const some = await this.authService.validateUser(email, password);
     return this.authService.login(some.email);
   }
-  @UsePipes(new ValidationPipe())
+  @UsePipes(new ValidationPipe({ whitelist: true }))
   @HttpCode(200)
   @Get('authByJwt')
   @UseGuards(JwtAuthGuard)
   async authByJwt(@Req() query) {
-    console.log(query.user);
     const user = await this.authService.authByJwt(query.user.id);
 
     return user;

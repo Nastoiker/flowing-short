@@ -7,7 +7,7 @@ describe('ConvertVideoService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [ConvertVideoService],
-    }).compile();
+    }).useMocker(() => ({})).compile();
 
     service = module.get<ConvertVideoService>(ConvertVideoService);
   });

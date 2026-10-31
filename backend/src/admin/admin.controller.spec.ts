@@ -9,7 +9,7 @@ describe('AdminController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AdminController],
       providers: [AdminService],
-    }).compile();
+    }).useMocker(() => ({})).compile();
 
     controller = module.get<AdminController>(AdminController);
   });

@@ -25,6 +25,7 @@ import { CategoryService } from '../category/category.service';
 import {VideoService} from "../video/video-service";
 
 @Controller('admin')
+@UseGuards(AdminJwtAuthGuard)
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,

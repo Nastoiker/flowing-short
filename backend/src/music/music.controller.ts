@@ -32,7 +32,8 @@ export class MusicController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.musicService.remove(id);
+  @UseGuards(JwtAuthGuard)
+  remove(@Req() request, @Param('id') id: string) {
+    return this.musicService.remove(id, request.user.id);
   }
 }

@@ -1,37 +1,11 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
-// import {AuthGuard} from "@nestjs/passport";
-import { PrismaService } from '../../prisma/prisma-service';
-import { UserModel } from '@prisma/client';
-import { ConfigService } from '@nestjs/config';
-import { ExtractJwt } from 'passport-jwt';
-import { Observable } from 'rxjs';
-import { AuthGuard } from '@nestjs/passport';
-import * as jwt from 'jsonwebtoken';
-export class AdminJwtAuthGuard implements CanActivate {
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
-    const request = context.switchToHttp().getRequest();
-
-    const jwtToken = request.headers.authorization?.split(' ')[1]; // получаем JWT из заголовка Authorization
-    console.log(jwtToken);
-    if (!jwtToken) {
-      throw new UnauthorizedException();
-    }
-    try {
-      const decoded = jwt.verify(jwtToken, 'SOME_SECRET'); // расшифровываем JWT и получаем его значения
-      request.user = decoded; // добавляем расшифрованные значения в объект request
-      // @ts-ignore
-      if (decoded.role === 'admin' || decoded.email === 'damur2004@gmail.com')
-        return true;
-      throw new UnauthorizedException();
-    } catch (err) {
-      throw new UnauthorizedException();
-    }
+import { ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import { JwtAuthGuard } from './jwt.guard';
+@Injectable()
+export class AdminJwtAuthGuard extends JwtAuthGuard {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    await super.canActivate(context);
+    // Passport loads the current role from the database, never from client input.
+    if (context.switchToHttp().getRequest().user?.role !== 'admin') throw new ForbiddenException();
+    return true;
   }
 }
