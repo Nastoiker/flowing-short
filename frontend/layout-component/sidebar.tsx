@@ -59,7 +59,7 @@ export const LeftSite = ({ className }: LeftSiteProps) => {
         appearance={"white"}
         className={"fixed my-20  w-24 z-40   " + styles.MenuButtin}
         icon={"IconMenu"}
-        aria-label="??????? ?????????"
+        aria-label="Открыть категории"
         onClick={() => {
           setIsOpen((o) => !o)
         }}
@@ -77,7 +77,7 @@ export const LeftSite = ({ className }: LeftSiteProps) => {
           appearance={"white"}
           className={"absolute right-0  w-24 z-50   " + styles.MenuButtin}
           icon={"IconClose"}
-          aria-label="??????? ?????????"
+          aria-label="Закрыть категории"
           onClick={() => {
             setIsOpen((o) => !o)
           }}
