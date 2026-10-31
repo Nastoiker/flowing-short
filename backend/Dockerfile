@@ -10,6 +10,7 @@ COPY src ./src
 COPY test ./test
 COPY scripts ./scripts
 RUN npm run build
+RUN npm prune --omit=dev --no-audit --no-fund && npx prisma generate
 
 FROM node:22-bookworm-slim AS runtime
 WORKDIR /app/backend

@@ -7,7 +7,7 @@ async function main() {
   assert.equal(process.env.DATABASE_URL, 'file:/app/backend/data/test.db');
   const db = new PrismaClient();
   const seed = () => {
-    const result = spawnSync(process.execPath, ['node_modules/ts-node/dist/bin.js', 'prisma/seed.ts'], { stdio: 'inherit', timeout: 60000 });
+    const result = spawnSync(process.execPath, ['dist/prisma/seed.js'], { stdio: 'inherit', timeout: 60000 });
     assert.equal(result.status, 0);
   };
   const snapshot = async () => JSON.stringify(await Promise.all([
