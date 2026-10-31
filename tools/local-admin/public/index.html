@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Демо · Локальная панель</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Демо — главная"><span class="brand-symbol" aria-hidden="true">↗</span><span>Демо<span class="brand-caption">Локальная панель</span></span></a>
+    <span class="local-badge"><span aria-hidden="true">●</span> Только на этом компьютере</span>
+  </header>
+  <main>
+    <section class="intro" aria-labelledby="title">
+      <div><p class="eyebrow">Рабочее пространство</p><h1 id="title">Проекты для показа</h1><p class="lead">Запускайте демо, делитесь ссылкой с клиентом и закрывайте доступ после встречи.</p></div>
+      <button id="refresh" class="button secondary" type="button"><span aria-hidden="true">↻</span> Обновить</button>
+    </section>
+    <div class="statusline"><span id="connection" role="status">Подключаемся к локальной панели…</span><span id="updated"></span></div>
+    <div id="global-error" class="notice error" role="alert" hidden></div>
+    <section id="projects" class="projects" aria-label="Проекты" aria-busy="true"><div id="loading" class="empty"><span class="loader" aria-hidden="true"></span><p>Проверяем проекты и контейнеры…</p></div></section>
+    <aside class="guide" aria-labelledby="guide-title">
+      <div class="guide-icon" aria-hidden="true">i</div><div><h2 id="guide-title">Как устроен доступ</h2><p>Панель управления работает только локально. Клиенту отправляйте публичную ссылку Cloudflare из карточки проекта. Компьютер, Docker и туннель должны оставаться включёнными.</p><p class="muted">«Скрыть ссылку» отключает внешний доступ. «Остановить» также выключает контейнеры проекта — сохранённые данные остаются на диске. При новом запуске публичный адрес может измениться.</p></div>
+    </aside>
+  </main>
+  <footer><span>Ваши проекты. Ваш контроль.</span><span>Статус обновляется каждые 5 секунд</span></footer>
+  <dialog id="stop-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-description">
+    <form method="dialog"><button class="dialog-close" aria-label="Закрыть окно" value="cancel">×</button></form>
+    <span class="dialog-icon" aria-hidden="true">Ⅱ</span><h2 id="dialog-title">Остановить проект?</h2><p id="dialog-description"></p>
+    <p class="muted">Контейнеры и публичная ссылка будут остановлены. Данные в томах Docker сохранятся.</p>
+    <div class="dialog-actions"><button id="cancel-stop" class="button secondary" type="button" autofocus>Отмена</button><button id="confirm-stop" class="button danger" type="button">Остановить проект</button></div>
+  </dialog>
+  <div id="announcement" class="sr-only" role="status" aria-live="polite"></div>
+</body>
+</html>
