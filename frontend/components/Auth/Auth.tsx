@@ -1,4 +1,4 @@
 ﻿"use client"
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-export const AuthComponent = () => <Button variant="outline" asChild><Link href="/authorization">Войти</Link></Button>
+import { buttonVariants } from '@/components/ui/button'
+export const AuthComponent = () => <Link className={buttonVariants({variant:'outline'})} href="/authorization">Войти</Link>
