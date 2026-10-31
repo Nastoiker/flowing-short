@@ -1,61 +1,34 @@
-"use client"
-
+﻿"use client"
 import Link from "next/link"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
-
-import { IRegister } from "@/types/Register.interface"
-import { ISearch } from "@/types/Search.interface"
-import { ILogin } from "@/types/login.interface"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import {useState} from "react";
-import {useAuthorizationQuery} from "@/stores/slices/regapi";
-
-const PageAuth = () => {
-  const {
-    register,
-    control,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<ILogin>()
-  const [login, setLogin] = useState<ILogin>()
-  const{ data, isLoading, error } = useAuthorizationQuery(login);
-  const onSubmit = async (formData: ILogin) => {
+export default function LoginPage() {
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<{email: string; password: string}>()
+  const [error, setError] = useState("")
+  const submit = handleSubmit(async values => {
+    setError("")
     try {
-      setLogin(formData)
-      if(localStorage.getItem('token')) {
-        window.location.href = '/';
-      }
-    } catch {
-      console.log(error);
-    }
-  }
-  return (
-    <div className={"m-auto w-fit p-5 space-y-5 border rounded-2xl"}>
-      <h1>Авторизация</h1>
-      <form action="" className="my-5" onSubmit={handleSubmit(onSubmit)}>
-        <Label htmlFor={"email"}>Email</Label>
-        <Input error={errors.email}  {...register("email", {
-          required: { value: true, message: "Заполните email" },
-          pattern: {
-            value: /\S+@\S+\.\S+/,
-            message: "Введите  email",
-          },
-        })} id={"email"} />
-        <Label htmlFor={"password"}>Password</Label>
-        <Input error={errors.password} type={"password"} {...register("password", { required: { value: true, message: "Заполните password" }})} id={"email"} />
-        <Button type={"submit"}>Авторизация</Button>
-      </form>
-      {
-        (error && ('status' in error) && error.status===401)  && <div>
-          <p>Ошибка авторизации</p>
-        </div>
-      }
-      <button className={"mx-auto block"}>Забыл пароль</button>
-      <Link href={"/registration"}>Создать аккаунт</Link>
-    </div>
-  )
+      const response = await fetch('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(values), signal: AbortSignal.timeout(10000) })
+      if (!response.ok) { setError(response.status === 401 ? 'Неверный email или пароль' : 'Сервис временно недоступен. Попробуйте ещё раз.'); return }
+      const result = await response.json()
+      if (!result.accesToken) throw new Error('Missing token')
+      localStorage.setItem('token', result.accesToken)
+      window.location.assign('/')
+    } catch { setError('Сервис временно недоступен. Попробуйте ещё раз.') }
+  })
+  return <main className="mx-auto max-w-md p-5">
+    <h1 className="text-2xl">Вход</h1>
+    <form noValidate onSubmit={submit} className="space-y-4 my-5">
+      <Label htmlFor="email">Email</Label>
+      <Input id="email" type="email" autoComplete="email" error={errors.email} {...register('email', { required: 'Введите email', pattern: {value: /^\S+@\S+\.\S+$/, message: 'Введите корректный email'} })}/>
+      <Label htmlFor="password">Пароль</Label>
+      <Input id="password" type="password" autoComplete="current-password" error={errors.password} {...register('password', {required:'Введите пароль'})}/>
+      {error && <p role="alert">{error}</p>}
+      <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Входим…' : 'Войти'}</Button>
+    </form>
+    <Link href="/registration">Создать аккаунт</Link>
+  </main>
 }
-export default PageAuth

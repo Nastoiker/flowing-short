@@ -90,7 +90,7 @@ export const Header = () => {
       ) : (
         <div className={'relative'}>
 
-              <div onClick={() => setIsOpenMenu((s) => !s)} className={"bg-transparent"}>
+              <button type="button" aria-label="???????" aria-expanded={isOpenMenu} onClick={() => setIsOpenMenu((s) => !s)} className={"bg-transparent"}>
                   <svg width="35" height="35" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <g clip-path="url(#clip0_119_1313)">
                       <path d="M6.66669 36.6667C6.66669 33.1305 8.07145 29.7391 10.5719 27.2386C13.0724 24.7381 16.4638 23.3334 20 23.3334C23.5362 23.3334 26.9276 24.7381 29.4281 27.2386C31.9286 29.7391 33.3334 33.1305 33.3334 36.6667H6.66669ZM20 21.6667C14.475 21.6667 10 17.1917 10 11.6667C10 6.14169 14.475 1.66669 20 1.66669C25.525 1.66669 30 6.14169 30 11.6667C30 17.1917 25.525 21.6667 20 21.6667Z" fill="currentcolor"/>
@@ -101,13 +101,13 @@ export const Header = () => {
                       </clipPath>
                     </defs>
                   </svg>
-              </div>
+              </button>
 
           {
             isOpenMenu &&
             <div className={'absolute p-2 visibleHeader right-[10px] bg-background border rounded-lg '}>
             <Button className={'block'}>
-              <Link href={"registration"}> Регистрация </Link>
+              <Link href={"/registration"}> Регистрация </Link>
             </Button>
             <AuthComponent />
             </div>

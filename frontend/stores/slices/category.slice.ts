@@ -23,21 +23,7 @@ export interface CategoryState {
   error: boolean
 }
 const initialState: CategoryState = {
-  category: [
-    {
-      id: "6c2d57d1-9540-44c6-87ad-63f2560f3705",
-      name: "Игры",
-      alias: "Games",
-      secondLevelCategory: [
-        {
-          id: "de030f0f-ef1c-4fbd-8f8c-9e27b4b3c620",
-          name: "dota 2",
-          alias: "dota-2",
-          firstLevelId: "6c2d57d1-9540-44c6-87ad-63f2560f3705",
-        },
-      ],
-    },
-  ],
+  category: [],
   pending: false,
   error: false,
 }

@@ -1,2 +1,1 @@
-export const api = 'http://95.163.241.148:8000';
-// export const api = 'http://localhost:8000';
+export { api_url as api } from "./domen.api";

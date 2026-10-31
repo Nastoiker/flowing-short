@@ -24,20 +24,21 @@ interface LeftSiteProps
 export const LeftSite = ({ className }: LeftSiteProps) => {
   const pathName = usePathname();
   const widthScreen = useWidthScreen();
-  const [isOpen, setIsOpen] = useState<boolean>(true);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
   const useSlowMotion = useReducedMotion();
   useEffect(() => {
-    if(pathName!=='/' && widthScreen<766 && widthScreen!==0) {
+    if(widthScreen<766) {
       setIsOpen(false)
     }
     if(widthScreen>766) {
       setIsOpen(true);
     }
     console.log('widthscreen' + widthScreen);
-  }, [pathName])
+  }, [pathName, widthScreen])
   const variants = {
     opened: {
       opacity: 1,
+      x: 0,
       transition: {
         stiffness: 20,
       },
@@ -58,23 +59,25 @@ export const LeftSite = ({ className }: LeftSiteProps) => {
         appearance={"white"}
         className={"fixed my-20  w-24 z-40   " + styles.MenuButtin}
         icon={"IconMenu"}
+        aria-label="??????? ?????????"
         onClick={() => {
           setIsOpen((o) => !o)
         }}
       />
       <motion.div
         className={
-          "w-48 fixed border-b  bg-background h-full px-2  top-18 z-50  pr-2 border-r " +
+          "w-48 fixed border-b  bg-background h-full px-2  top-16 z-50  pr-2 border-r " +
           styles.leftSideMargin
         }
         variants={variants}
-        initial={"opened"}
+        initial={false}
         animate={isOpen ? "opened" : "closed"}
       >
         <ButtonIcon
           appearance={"white"}
           className={"absolute right-0  w-24 z-50   " + styles.MenuButtin}
           icon={"IconClose"}
+          aria-label="??????? ?????????"
           onClick={() => {
             setIsOpen((o) => !o)
           }}

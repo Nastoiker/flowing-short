@@ -20,10 +20,12 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             className,
             error && 'border-red-600'
           )}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error && props.id ? `${props.id}-error` : undefined}
           ref={ref}
           {...props}
         />
-        {error && <span className={"text-red-200 my-2 block"}>{error.message}</span>}
+        {error && <span role="alert" id={props.id ? `${props.id}-error` : undefined} className={"text-red-600 dark:text-red-400 my-2 block"}>{error.message}</span>}
       </>
     )
   }

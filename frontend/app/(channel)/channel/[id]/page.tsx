@@ -15,11 +15,11 @@ import {LayoutVideo} from "@/components/Layot.video";
 import {LayoutMusic} from "@/components/Layout.music";
 
 interface PageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 async function getChannel(userId): Promise<IUser | null> {
   try {
-    const res = await axios.get(`${api_url}/user/` + userId)
+    const res = await axios.get(`${process.env.API_INTERNAL_URL || "http://127.0.0.1:8000"}/user/` + userId, { timeout: 5000 })
     if (!res?.data) {
       return null
     }
@@ -30,7 +30,7 @@ async function getChannel(userId): Promise<IUser | null> {
 }
 
 export default async function PagePage({ params }: PageProps) {
-  const id = params?.id
+  const id = (await params).id
   const data = await getChannel(id);
   if (!data) notFound();
   return (

@@ -1,4 +1,3 @@
-import { NotFound } from "next/dist/client/components/error"
 import { notFound } from "next/navigation"
 import { useCheckAuthQuery } from "@/stores/slices/regapi"
 
@@ -17,7 +16,7 @@ export interface VideoByCategory {
 }
 
 interface PageProps {
-  params: { categoryId: string },
+  params: Promise<{ categoryId: string }>,
 };
 // async function getCategory(alias) {
 //   try {
@@ -41,9 +40,9 @@ interface PageProps {
 // }
 
 export default async function PageCategory({ params }: PageProps) {
-  const slug = params.categoryId;
+  const slug = (await params).categoryId;
   const videos = await getCategory(slug);
-  if (videos.video && videos.videos.length===0)  {
+  if (!videos?.videos)  {
     notFound();
   }
   console.log(slug);

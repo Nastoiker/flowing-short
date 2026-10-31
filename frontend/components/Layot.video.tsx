@@ -1,6 +1,6 @@
 "use client"
 
-import {useCallback, useMemo, useState} from "react"
+import {useCallback, useMemo, useState, useEffect} from "react"
 import { useCheckAuthQuery } from "@/stores/slices/regapi"
 import { useFollowsQuery } from "@/stores/slices/user.api"
 
@@ -16,7 +16,7 @@ interface LayoutProps {
 
 
 export function LayoutVideo({
-  videos,
+  videos = [],
   user,
 }: {
   videos: IVideo[]
@@ -24,6 +24,7 @@ export function LayoutVideo({
 }) {
 
   const [filteredVideo, setFilteredVideo ] = useState<IVideo[]>(videos);
+  useEffect(() => setFilteredVideo(videos), [videos]);
   const follow = useFollowsQuery({});
   const [activeVideoValue, setActiveVideo] = useState(null)
   const [commentsVisible, setCommentsVisible] = useState({})

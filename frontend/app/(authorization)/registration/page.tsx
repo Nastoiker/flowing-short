@@ -1,108 +1,36 @@
-"use client"
-
-import { Select, SelectValue } from "@radix-ui/react-select"
+﻿"use client"
+import Link from "next/link"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
-
-import { IRegister } from "@/types/Register.interface"
-import { ISearch } from "@/types/Search.interface"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import {
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select"
-import { Htag } from "@/components/Htag/Htag"
-import Link from 'next/link';
-import {useRegistrationMutation} from "@/stores/slices/regapi";
-import {useState} from "react";
-import { useRouter } from "next/navigation"
-const PageRegistration = () => {
-  const router =  useRouter();
-  const {
-    register,
-    control,
-    handleSubmit,
-    formState: { errors },
-    reset,
-    watch,
-  } = useForm<IRegister>({
-    defaultValues: {
-      role: 'user',
-      authorUrl: 'http://user',
-    }
-  });
-  const [password, notCorrect] = useState<boolean>();
-  const [error, setError] = useState<boolean>(false);
-  const [registrationFunc, isLoading] = useRegistrationMutation({});
-  const onSubmit = async (formData: IRegister) => {
-     try {
-       delete formData.confirm_password;
-       const { confirm_password, ...dataAuth} = formData;
-       console.log(dataAuth);
-       await registrationFunc(dataAuth);
-       setError(false);
-       window.location.href = '/'
-     } catch (e) {
-       console.log(e.message);
-        setError(true);
-     }
-
-  }
-  return (
-    <div className="mx-auto bg-background max-w-[500px]">
-      <form
-        className={"space-y-5 border p-10 my-5 rounded-2xl"}
-        onSubmit={handleSubmit(onSubmit)}
-      >
-        <Htag type='h1' className='text-center' >Регистрация</Htag>
-        <p className="text-center">
-          Есть аккаунт?
-          <Link className="border-b-2" href='/authorization'>Авторизируйтесь</Link>
-        </p>
-
-        <Label htmlFor={"email"}>Emal</Label>
-        <Input error={errors.email} {...register("email", { required:  {value: true,  message: "Заполните email"}, pattern: {
-            value: /\S+@\S+\.\S+/,
-            message: "Введите  email",
-          }, })} id={"email"} />
-        <Label htmlFor={"login"}>Login</Label>
-        <Input error={errors.login} {...register("login", { required:  {value: true,  message: "Заполните login"} })} id={"login"} />
-        <Label htmlFor={"number"}>Номер телефона</Label>
-        <Input
-          error={errors.phone}
-          type={"string"}
-          {...register("phone", { required: {value: true,  message: "Заполните номер"},  pattern: {
-              value: /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/,
-              message: "Введите  номер",
-            } })}
-          id={"number"}
-        />
-        <Label htmlFor={"password"}>Пароль</Label>
-        <Input type={"password"} error={errors.hashpassword} {...register("hashpassword", { required: {value: true,  message: "Заполните пароль"} })} id={"password"} />
-        <Label htmlFor={"passwordVerif"}>Подтверждение пароля</Label>
-        <Input error={errors.confirm_password} type={"password"} id={"passwordVerif"} {...register("confirm_password", {
-          required: {value: true,  message: "Подтвердите пароль"},
-          validate: (val: string) => {
-            if (watch('hashpassword') != val) {
-              return "Пароль должен совпадать";
-            }
-          },
-        })} />
-        <div className={"text-center"}>
-          {" "}
-          <Button type={"submit"} className={"w-full text-center"}>
-            Регистрация
-          </Button>
-        </div>
-        { error && <div>
-          <h1>
-            Ошибка регистрации
-          </h1>
-        </div> }
-      </form>
-    </div>
-  )
+type Registration = { email: string; login: string; hashpassword: string; confirm: string }
+export default function RegistrationPage() {
+  const { register, watch, handleSubmit, formState: { errors, isSubmitting } } = useForm<Registration>()
+  const [error, setError] = useState('')
+  const submit = handleSubmit(async ({confirm, ...values}) => {
+    setError('')
+    try {
+      const response = await fetch('/api/auth/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(values), signal:AbortSignal.timeout(10000)})
+      if (!response.ok) { setError(response.status === 409 ? 'Этот email уже зарегистрирован' : 'Не удалось создать аккаунт. Попробуйте ещё раз.'); return }
+      window.location.assign('/authorization')
+    } catch { setError('Не удалось создать аккаунт. Попробуйте ещё раз.') }
+  })
+  return <main className="mx-auto max-w-md p-5">
+    <h1 className="text-2xl">Регистрация</h1>
+    <form noValidate onSubmit={submit} className="space-y-4 my-5">
+      <Label htmlFor="email">Email</Label>
+      <Input id="email" type="email" autoComplete="email" error={errors.email} {...register('email',{required:'Введите email',pattern:{value:/^\S+@\S+\.\S+$/,message:'Введите корректный email'}})}/>
+      <Label htmlFor="login">Имя</Label>
+      <Input id="login" autoComplete="nickname" error={errors.login} {...register('login',{required:'Введите имя',minLength:{value:2,message:'Минимум 2 символа'},maxLength:50})}/>
+      <Label htmlFor="password">Пароль</Label>
+      <Input id="password" type="password" autoComplete="new-password" error={errors.hashpassword} {...register('hashpassword',{required:'Введите пароль',minLength:{value:8,message:'Минимум 8 символов'},maxLength:{value:72,message:'Максимум 72 символа'}})}/>
+      <Label htmlFor="confirm">Повторите пароль</Label>
+      <Input id="confirm" type="password" autoComplete="new-password" error={errors.confirm} {...register('confirm',{required:'Повторите пароль',validate:value=>value===watch('hashpassword') || 'Пароли должны совпадать'})}/>
+      {error && <p role="alert">{error}</p>}
+      <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Создаём…' : 'Создать аккаунт'}</Button>
+    </form>
+    <Link href="/authorization">Войти</Link>
+  </main>
 }
-export default PageRegistration

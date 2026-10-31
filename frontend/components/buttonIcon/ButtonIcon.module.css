@@ -10,7 +10,7 @@
   background-color: transparent;
 }
 .leftSideMargin {
-  margin-top: 4rem;
+  margin-top: 0;
 }
 .ghost:hover {
   color: white;

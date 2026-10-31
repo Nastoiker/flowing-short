@@ -52,6 +52,7 @@ export const Video = ({
   const [isPlayingAudio, setIsPlayingAudio] = useState(false)
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
   useEffect(() => {
+    if (!video.music?.music_url) return;
     const audioEl = new Audio(
       `${api_url}/user/` + video.music.music_url
     )
@@ -74,8 +75,9 @@ export const Video = ({
   useEffect(() => {
     if (Math.floor(currentTime) == Math.floor(videoRef?.current?.duration)) {
       console.log(1)
+      if (!audio) return;
       audio.currentTime = 0 // reset the current time to zero
-      audio.play()
+      void audio.play().catch(() => {})
     }
     if(activeVideo!==video.id) {
       audio?.pause();
@@ -134,7 +136,7 @@ export const Video = ({
   const onVideoClick = async () => {
 
     if (isPlaying) {
-       audio.pause();
+       audio?.pause();
       videoRef?.current?.pause();
       setIsPlayingAudio(false);
       setIsPlaying(false)
@@ -142,13 +144,13 @@ export const Video = ({
       onClickVideoProps();
       setIsPlaying(true)
       setIsPlayingAudio(true)
-      await audio.play();
+      await audio?.play().catch(() => {});
       if (!isWatching) {
         console.log(1)
         handleEndVideo()
       }
       setIsWatching(true)
-      videoRef?.current?.play()
+      void videoRef?.current?.play().catch(() => {})
     }
   }
   const handleWatch = () => {}
@@ -186,7 +188,10 @@ export const Video = ({
           <video
             width={350}
             height={350}
-            className={"rounded-3xl min-w-[300px] sm:min-w-[400px] min-h-[500px] "}
+            className={"rounded-3xl w-full max-w-[400px] min-h-[500px]"}
+            playsInline
+            preload="metadata"
+            aria-label={video.Title}
 
             onClick={onVideoClick}
             loop

@@ -1,7 +1,7 @@
 "use client"
+import { useParams } from "next/navigation"
 
 import {useEffect, useState} from "react"
-import { NotFound } from "next/dist/client/components/error"
 import {notFound, useSearchParams} from "next/navigation"
 import {useAppDispatch, useAppSelector} from "@/stores"
 
@@ -21,17 +21,15 @@ export interface VideoByCategory {
   videos: IVideo[]
 }
 
-interface PageProps {
-  params: { founded: string }
-}
 
-export default function PageFounded({ params }: PageProps) {
-  const found = params?.founded;
+
+export default function PageFounded() {
+  const found = useParams<{founded:string}>().founded;
   const [search, setSearch] = useState();
   const searchParams = useSearchParams();
   const  user = useCheckAuthQuery({});
   const searchvValue = searchParams.get('byValue');
-  const searchState = useAppSelector(state=> state.search.search);
+  const searchState = found;
   const [activeFound, setActiveFound] = useState<string>('video');
   const dispatch = useAppDispatch()
   useEffect(() => {

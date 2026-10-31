@@ -1,5 +1,4 @@
-export const api_url = "http://95.163.241.148:8000"
-// export const api_url = "http://localhost:8000"
+export const api_url = "/api"
 
 export const DOMEN = {
   video: {

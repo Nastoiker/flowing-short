@@ -1,4 +1,3 @@
-import { NotFound } from "next/dist/client/components/error"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { useCheckAuthQuery } from "@/stores/slices/regapi"
@@ -9,11 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {api_url} from "@/domen.api";
 
 interface PageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 async function getChannel(id: string): Promise<IUser | null> {
   try {
-    const res = await fetch(`${api_url}/user/` + id)
+    const res = await fetch(`${process.env.API_INTERNAL_URL || "http://127.0.0.1:8000"}/user/` + id, { signal: AbortSignal.timeout(5000) })
     if (!res?.ok) {
       return null
     }
@@ -24,7 +23,7 @@ async function getChannel(id: string): Promise<IUser | null> {
 }
 
 export default async function FolowsUserPage({ params }: PageProps) {
-  const id = params?.id
+  const id = (await params).id
   const data = await getChannel(id)
   if (!data) {
     return <div></div>

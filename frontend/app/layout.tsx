@@ -1,4 +1,3 @@
-import { Inter as FontSans } from "@next/font/google"
 
 import { cn } from "@/lib/utils"
 import { SiteHeader } from "@/components/site-header"
@@ -18,11 +17,6 @@ import {ThemeProvider} from "@/components/ThemeProvider";
 import "@/styles/globals.css"
 import {Up} from "@/components/Up/Up";
 
-const fontSans = FontSans({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
-})
 
 interface RootLayoutProps {
   children: React.ReactNode
@@ -34,14 +28,13 @@ const TagsObject = [
 ]
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="ru" suppressHydrationWarning>
       <head />
       <body>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <div
           className={cn(
-            "max-w-screen-2xl  bg-background mx-auto AutoMargin min-h-screen  font-sans  box-border antialiased ",
-            fontSans.variable
+            "max-w-screen-2xl  bg-background mx-auto AutoMargin min-h-screen  font-sans  box-border antialiased "
           )}
         >
           <Providers>

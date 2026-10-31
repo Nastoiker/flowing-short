@@ -1,5 +1,5 @@
 "use client"
-import { NotFound } from "next/dist/client/components/error"
+import { useParams } from "next/navigation"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { useCheckAuthQuery } from "@/stores/slices/regapi"
@@ -12,15 +12,13 @@ import {useAppDispatch, useAppSelector} from "@/stores";
 import {useEffect} from "react";
 import {searchVideoByTag} from "@/stores/slices/tag.slice";
 
-interface PageProps {
-  params: { tagId: string }
-}
 
-export default  function PagePage({ params }: PageProps) {
-  const id = params.tagId;
+
+export default  function PagePage() {
+  const id = useParams<{tagId:string}>().tagId;
   const dispatch = useAppDispatch();
 
-  const tag = useAppSelector(state=>state.tag.search);
+  const tag = id;
   useEffect(() => {
     dispatch(searchVideoByTag(tag));
   },[tag]);

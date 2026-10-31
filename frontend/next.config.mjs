@@ -1,21 +1,12 @@
-
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  images: {
-   domains: ['95.163.241.148:8000'],
-   //   domains: ['localhost'],
-
-  },
+import { fileURLToPath } from 'node:url';
+export default {
+  outputFileTracingRoot: fileURLToPath(new URL('.', import.meta.url)),
+  output: 'standalone',
+  poweredByHeader: false,
   reactStrictMode: true,
-  experimental: {
-    appDir: true,
-    fontLoaders: [
-      {
-        loader: "@next/font/google",
-        options: { subsets: ["latin"] },
-      },
-    ],
+  experimental: { cpus: 2 },
+  async rewrites() {
+    return [{ source: '/api/:path*', destination: (process.env.API_INTERNAL_URL || 'http://127.0.0.1:8000') + '/:path*' }];
   },
-}
-
-export default nextConfig
+};
