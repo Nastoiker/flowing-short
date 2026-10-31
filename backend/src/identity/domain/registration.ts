@@ -30,6 +30,13 @@ export interface IdentityEvent {
 export function normalizeEmail(email: string): string {
   return typeof email === 'string' ? email.trim().toLowerCase() : '';
 }
+export function normalizeDisplayName(value: string): string {
+  const name = typeof value === 'string' ? value.trim() : '';
+  if (name.length < 2 || name.length > 80) {
+    throw new RegistrationViolation('Display name must contain 2 to 80 characters');
+  }
+  return name;
+}
 export function validatePassword(password: string): void {
   if (
     typeof password !== 'string' ||
@@ -45,7 +52,7 @@ export function validateRegistration(
   input: RegistrationInput,
 ): RegistrationInput {
   const email = normalizeEmail(input.email || '');
-  const login = typeof input.login === 'string' ? input.login.trim() : '';
+  const login = normalizeDisplayName(input.login);
   validatePassword(input.hashpassword);
   if (!/^\S+@\S+\.\S+$/.test(email) || !login || login.length > 100) {
     throw new RegistrationViolation('Invalid account details');

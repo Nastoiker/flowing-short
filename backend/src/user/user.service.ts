@@ -1,6 +1,6 @@
 import { SocialGraph } from '../social/application/social-graph';
 import { SocialViolation } from '../social/domain/relationships';
-import { identityEvent, validatePassword } from '../identity/domain/registration';
+import { identityEvent, validatePassword, normalizeDisplayName } from '../identity/domain/registration';
 import { Injectable, BadRequestException, UnauthorizedException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
 import {
@@ -201,6 +201,10 @@ export class UserService {
   }
   async updateProfile(user: UserModel, file: Express.Multer.File | undefined, update: UpdateUserDto) {
     const data: Prisma.UserModelUpdateInput = { login: update.login, phone: update.phone };
+    if (update.login !== undefined) {
+      try { data.login = normalizeDisplayName(update.login); }
+      catch (error) { throw new BadRequestException(error.message); }
+    }
     if (update.password) {
       try { validatePassword(update.password); } catch (error) { throw new BadRequestException(error.message); }
       if (!update.oldpassword || !(await compare(update.oldpassword, user.hashpassword))) {

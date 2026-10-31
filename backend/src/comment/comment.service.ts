@@ -11,8 +11,15 @@ export class CommentService {
   constructor(private readonly prismaService: PrismaService) {}
   async createCommentDto(createCommentDto: CreateCommentDto) {
     const { comment, writtenById, videoId, pictures } = createCommentDto;
-    return this.prismaService.comment.create({
-      data: { comment, writtenById, videoId, pictures },
+    return this.prismaService.write(async (tx) => {
+      const created = await tx.comment.create({
+        data: { comment, writtenById, videoId, pictures },
+      });
+      const video = await tx.video.update({
+        where: { id: videoId },
+        data: { comment_count: { increment: 1 } },
+      });
+      return { ...created, videoCommentCount: video.comment_count };
     });
   }
   async createCommentOnUserDto(createCommentOnUserDto: CreateCommentOnUserDto) {

@@ -112,6 +112,7 @@ describe('API with isolated SQLite database', () => {
   it('toggles likes atomically without duplicates or drifting counters under concurrent requests', async () => {
     const like=()=>request(app.getHttpServer()).post('/user/likeVideo').set('Authorization','Bearer '+token).send({videoId:'other-video'});
     const responses=await Promise.all([like(),like()]); expect(responses.every(r=>r.status===201)).toBe(true);
+ expect(responses.map(r=>[r.body.like,r.body.likesCount]).sort((a,b)=>Number(a[1])-Number(b[1]))).toEqual([[false,0],[true,1]]);
     expect(await db.like.count({where:{likeById:userId,videoId:'other-video'}})).toBe(0);
     expect((await db.video.findUniqueOrThrow({where:{id:'other-video'}})).likesCount).toBe(0);
     expect((await db.userModel.findUniqueOrThrow({where:{id:'other-author'}})).LikeCount).toBe(0);
@@ -162,6 +163,35 @@ describe('API with isolated SQLite database', () => {
     expect(response.body.find(item=>item.userId===userId).displayName).toBe('Newest name');
     expect(JSON.stringify(response.body)).not.toContain('hashpassword');
   });
+  it('rejects blank profile names without changing account or outbox', async () => {
+ const before=await db.userModel.findUniqueOrThrow({where:{id:userId}});
+ const outbox=await db.outboxEvent.count();
+ await request(app.getHttpServer()).patch('/user/'+userId).set('Authorization','Bearer '+token).send({login:'  '}).expect(400);
+ expect(await db.userModel.findUniqueOrThrow({where:{id:userId}})).toEqual(before);
+ expect(await db.outboxEvent.count()).toBe(outbox);
+ await request(app.getHttpServer()).patch('/user/'+userId).set('Authorization','Bearer '+token).send({login:'  Normalized name  '}).expect(200);
+ expect((await db.userModel.findUniqueOrThrow({where:{id:userId}})).login).toBe('Normalized name');
+ });
+ it('creates comments and authoritative feed counters together', async () => {
+ const before=(await db.video.findUniqueOrThrow({where:{id:'other-video'}})).comment_count;
+ const response=await request(app.getHttpServer()).post('/comment/createComment').set('Authorization','Bearer '+token).send({videoId:'other-video',comment:'Synthetic comment'}).expect(201);
+ expect(response.body.videoCommentCount).toBe(before+1);
+ const feed=await request(app.getHttpServer()).get('/Video/feed?limit=30').expect(200);
+ expect(feed.body.items.find(v=>v.id==='other-video').comment_count).toBe(before+1);
+ });
+ it('rolls back projection with inbox failure and applies retry exactly once', async () => {
+ const projector=app.get(ProjectCreator);
+ const event=identityEvent('user.registered.v1','rollback-event',{id:'rollback-user',login:'Rollback fixture',authorUrl:'rollback'},new Date());
+ await db.$executeRawUnsafe("CREATE TRIGGER integration_inbox_failure BEFORE INSERT ON EventInbox WHEN NEW.eventId = 'rollback-event' BEGIN SELECT RAISE(ABORT, 'synthetic inbox failure'); END");
+ try {
+ await expect(projector.execute(JSON.stringify(event))).rejects.toThrow();
+ expect(await db.creatorDirectory.count({where:{userId:event.userId}})).toBe(0);
+ expect(await db.eventInbox.count({where:{eventId:event.eventId}})).toBe(0);
+ } finally { await db.$executeRawUnsafe('DROP TRIGGER integration_inbox_failure'); }
+ await projector.execute(JSON.stringify(event)); await projector.execute(JSON.stringify(event));
+ expect(await db.creatorDirectory.count({where:{userId:event.userId}})).toBe(1);
+ expect(await db.eventInbox.count({where:{eventId:event.eventId}})).toBe(1);
+ });
   it('updates a password only after verifying the current password and hashes the replacement', async () => {
     await request(app.getHttpServer()).patch('/user/' + userId).set('Authorization','Bearer '+token).send({ password: 'UpdatedPassword123!', oldpassword: 'wrong' }).expect(401);
     await request(app.getHttpServer()).patch('/user/' + userId).set('Authorization','Bearer '+token).send({ password: 'UpdatedPassword123!', oldpassword: input.hashpassword }).expect(200);

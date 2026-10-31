@@ -24,3 +24,10 @@ describe('identity integration contract', () => {
     expect(() => parseIdentityMessage(body)).toThrow(InvalidIdentityMessage);
   });
 });
+
+it.each([-1, 1.5, 2147483648, Number.MAX_SAFE_INTEGER, 1e100])('rejects non-persistable revision %p', aggregateVersion => {
+ expect(() => parseIdentityMessage(JSON.stringify({eventId:'overflow',userId:'user',type:'user.registered.v1',schemaVersion:1,aggregateVersion,occurredAt:'2026-01-01T00:00:00Z',profile:{displayName:'Name',authorUrl:'name'}}))).toThrow(InvalidIdentityMessage);
+});
+it.each([0,2147483647])('accepts supported int32 revision %p', aggregateVersion => {
+ expect(parseIdentityMessage(JSON.stringify({eventId:'valid',userId:'user',type:'user.registered.v1',schemaVersion:1,aggregateVersion,occurredAt:'2026-01-01T00:00:00Z',profile:{displayName:'Name',authorUrl:'name'}})).aggregateVersion).toBe(aggregateVersion);
+});

@@ -1,5 +1,6 @@
 import {
   identityEvent,
+  normalizeDisplayName,
   RegistrationViolation,
   validateRegistration,
 } from './registration';
@@ -45,3 +46,8 @@ describe('identity registration invariants', () => {
     ]);
   });
 });
+
+it.each([undefined, '', '  ', ' a ', 'x'.repeat(81)])('rejects invalid display name %p', value => {
+ expect(() => normalizeDisplayName(value)).toThrow(RegistrationViolation);
+});
+it('normalizes public display names',()=>expect(normalizeDisplayName(' Public name ')).toBe('Public name'));

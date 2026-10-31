@@ -84,7 +84,7 @@ export class PrismaSocialRepository implements SocialRepository {
           create: { likeById: userId, videoId, like: true },
           update: { like: true },
         });
-      await tx.video.update({
+      const updatedVideo = await tx.video.update({
         where: { id: videoId },
         data: { likesCount: { increment: delta } },
       });
@@ -96,7 +96,7 @@ export class PrismaSocialRepository implements SocialRepository {
         where: { id: userId },
         data: { hisLikes: { increment: delta } },
       });
-      return result;
+      return { ...result, like: active, likesCount: updatedVideo.likesCount };
     });
   }
 }

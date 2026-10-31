@@ -34,7 +34,8 @@ export function parseIdentityMessage(body: string): DirectoryEvent {
   }
   if (
     event.schemaVersion !== 1 ||
-    !Number.isInteger(event.aggregateVersion) ||
+    !Number.isSafeInteger(event.aggregateVersion) ||
+    event.aggregateVersion > 2147483647 ||
     event.aggregateVersion < 0 ||
     typeof event.occurredAt !== 'string' ||
     !Number.isFinite(Date.parse(event.occurredAt)) ||

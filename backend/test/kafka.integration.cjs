@@ -144,6 +144,22 @@ test(
         topic,
         messages: [{ key: user.id, value: 'not valid JSON' }],
       });
+      const overflowId = 'overflow-' + suffix;
+      const overflow = await producer.send({topic,messages:[{key:user.id,value:JSON.stringify({...delivered.payload,eventId:overflowId,aggregateVersion:Number.MAX_SAFE_INTEGER})}]});
+      // Inject a failure after the projection write but before its inbox commit.
+      // The real consumer must retry this same offset after the trigger is removed.
+      const retryId = 'retry-' + suffix;
+      const retryUser = 'retry-user-' + suffix;
+      const trigger = 'inbox_failure_' + suffix.replaceAll('-', '');
+      await db.$executeRawUnsafe('CREATE TRIGGER ' + trigger + " BEFORE INSERT ON EventInbox WHEN NEW.eventId = '" + retryId + "' BEGIN SELECT RAISE(ABORT, 'synthetic inbox failure'); END");
+      try {
+        await producer.send({topic,messages:[{key:user.id,value:JSON.stringify({...delivered.payload,eventId:retryId,userId:retryUser})}]});
+        await eventually(async () => assert.equal((await fetch(api+'/health/ready',{signal:AbortSignal.timeout(5000)})).status,503));
+        assert.equal(await db.creatorDirectory.count({where:{userId:retryUser}}),0);
+        assert.equal(await db.eventInbox.count({where:{eventId:retryId}}),0);
+      } finally { await db.$executeRawUnsafe('DROP TRIGGER IF EXISTS ' + trigger); }
+      await eventually(async () => assert.equal(await db.eventInbox.count({where:{eventId:retryId}}),1));
+      assert.equal(await db.creatorDirectory.count({where:{userId:retryUser}}),1);
       const legacyId = 'legacy-' + suffix;
       await producer.send({
         topic,
@@ -186,6 +202,9 @@ test(
         },
       });
       assert.equal(rejected?.reason, 'invalid_json');
+      const overflowRejected=await db.rejectedEvent.findUnique({where:{topic_partition_offset:{topic,partition:overflow[0].partition,offset:overflow[0].baseOffset}}});
+      assert.equal(overflowRejected?.reason,'unsupported_schema');
+      assert.equal(await db.eventInbox.count({where:{eventId:overflowId}}),0);
       assert.equal((await fetch(api + '/health/ready')).status, 200);
     } finally {
       await consumer.disconnect();

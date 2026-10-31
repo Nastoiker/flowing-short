@@ -94,8 +94,10 @@ test(
           userId: 'b',
           secondCategoryId: 'second',
           likesCount: 999,
+          comment_count: 999,
         },
       });
+      await db.comment.create({data:{id:"legacy-comment",writtenById:"a",videoId:"video",comment:"Preserved comment"}});
       await db.like.create({
         data: {
           id: 'duplicate-a',
@@ -189,6 +191,8 @@ test(
         ).map((u) => u.email),
         ['Legacy@Example.test', 'legacy@example.test', 'third@example.test'],
       );
+      assert.equal((await db.video.findUnique({where:{id:'video'}})).comment_count,1);
+      assert.equal(await db.comment.count({where:{id:'legacy-comment'}}),1);
       assert.equal(
         (await db.video.findUnique({ where: { id: 'video' } })).Description,
         'Preserve me',
