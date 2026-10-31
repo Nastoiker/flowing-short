@@ -18,8 +18,8 @@ export const Up = ( ): JSX.Element => {
     })
   }
   return (
-    <motion.button className={styles.up}  animate={controls} initial={{ opacity: 0 }}>
-      <ButtonIcon className={'transparent'} appearance={"primary"} onClick={scrollToTop} icon={'IconUp'}/>
-    </motion.button>
+    <motion.div className={styles.up}  animate={controls} initial={{ opacity: 0 }}>
+      <ButtonIcon className={'transparent'} appearance={"primary"} onClick={scrollToTop} icon={'IconUp'} aria-label="Наверх"/>
+    </motion.div>
   )
 }
