@@ -115,7 +115,7 @@ try {
 } finally {
   if (tableRenamed) renameUserTable(true);
 }
-await probe('/health/ready', 200);
+await eventually(() => probe('/health/ready', 200));
 console.log('PASS: unavailable database schema returns bounded 503; table and readiness recover');
 
 let mustRestore = false;
@@ -145,8 +145,15 @@ try {
   await eventually(() => {
     assert.deepEqual(outboxState(user.id), [{ id: pending[0].id, published: true }]);
   }, 45000);
+  await eventually(async () => {
+    const response = await fetch(new URL('/creators?limit=30', api), { signal: AbortSignal.timeout(3000) });
+    assert.equal(response.status, 200);
+    const creators = await response.json();
+    assert.equal(creators.filter(creator => creator.userId === user.id).length, 1,
+      'Recovered consumer must apply the registration to the creator directory exactly once');
+  }, 45000);
   mustRestore = false;
-  console.log('PASS: readiness recovers and the same pending event is acknowledged by Kafka');
+  console.log('PASS: readiness, event delivery and idempotent creator projection recover');
   compose('restart', '-t', '10', 'backend');
   await eventually(() => probe('/health/ready', 200));
   const login = await fetch(new URL('/auth/login', api), {
