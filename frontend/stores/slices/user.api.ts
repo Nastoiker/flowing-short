@@ -1,5 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/dist/query/react"
 import {api} from "@/config";
+import { AuthApi } from './regapi'
+import { videoMetricsReceived } from './video-metrics.slice'
 
 export const UserApi = createApi({
   reducerPath: "userApi",
@@ -15,6 +17,15 @@ export const UserApi = createApi({
   }),
   endpoints: (builder) => ({
     LikeVideo: builder.mutation({
+      async onQueryStarted({videoId}, {dispatch, queryFulfilled}) {
+        try {
+          const {data} = await queryFulfilled
+          dispatch(AuthApi.util.updateQueryData('checkAuth', {}, user => {
+            user.Like = [...(user.Like || []).filter(item => item.videoId !== videoId), data]
+          }))
+          dispatch(videoMetricsReceived([{id: videoId, likesCount: data.likesCount}]))
+        } catch {}
+      },
       query: (videoId) => ({
         url: "/likeVideo",
         method: "POST",
@@ -48,6 +59,12 @@ export const UserApi = createApi({
       }),
     }),
     CommentVideo: builder.mutation({
+      async onQueryStarted({videoId}, {dispatch, queryFulfilled}) {
+        try {
+          const {data} = await queryFulfilled
+          dispatch(videoMetricsReceived([{id: videoId, comment_count: data.videoCommentCount}]))
+        } catch {}
+      },
       query: (commentVideo) => ({
         url: "/createComment",
         method: "POST",
@@ -68,6 +85,14 @@ export const UserApi = createApi({
       }),
     }),
     followChannel: builder.mutation({
+      async onQueryStarted({authorId}, {dispatch, queryFulfilled}) {
+        try {
+          const {data} = await queryFulfilled
+          dispatch(AuthApi.util.updateQueryData('checkAuth', {}, user => {
+            user.folowing = [...(user.folowing || []).filter(item => item.authorId !== authorId), data]
+          }))
+        } catch {}
+      },
       query: (commentVideo) => ({
         url: "/followChannel",
         method: "POST",
@@ -75,6 +100,14 @@ export const UserApi = createApi({
       }),
     }),
     unfollowChannel: builder.mutation({
+      async onQueryStarted({authorId}, {dispatch, queryFulfilled}) {
+        try {
+          await queryFulfilled
+          dispatch(AuthApi.util.updateQueryData('checkAuth', {}, user => {
+            user.folowing = (user.folowing || []).filter(item => item.authorId !== authorId)
+          }))
+        } catch {}
+      },
       query: (commentVideo) => ({
         url: "/unfollowChannel",
         method: "POST",

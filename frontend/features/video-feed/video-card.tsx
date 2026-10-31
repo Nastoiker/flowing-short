@@ -1,5 +1,6 @@
 "use client"
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useState } from 'react'
+import { useAppSelector } from '@/stores'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { Heart, MessageCircle, Play, Pause, Eye } from 'lucide-react'
@@ -16,23 +17,20 @@ const CommentsPanel = dynamic(() => import('@/components/Comment/commentScrollAr
 type Props = { video: IVideo; user?: IUser; active: boolean; activate: (id: string) => void }
 
 export const VideoCard = memo(function VideoCard({video, user, active, activate}: Props) {
-  const [like, likeState] = useLikeVideoMutation()
-  const [follow, followState] = useFollowChannelMutation()
-  const [unfollow, unfollowState] = useUnfollowChannelMutation()
+  const [like, likeState] = useLikeVideoMutation({fixedCacheKey: video.id})
+  const [follow, followState] = useFollowChannelMutation({fixedCacheKey: video.authorVideo.id})
+  const [unfollow, unfollowState] = useUnfollowChannelMutation({fixedCacheKey: video.authorVideo.id})
   const [remove, removeState] = useDeleteVideoMutation()
   const [watch] = useWatchVideoMutation()
   const [watchGuest] = useWatchVideounLoginMutation()
-  const [liked, setLiked] = useState(false)
-  const [likes, setLikes] = useState(video.likesCount)
-  const [followingId, setFollowingId] = useState<string | null>(null)
+  const liked = Boolean(user?.Like?.some(item => item.videoId === video.id && item.like !== false))
+  const followingId = user?.folowing?.find(item => item.authorId === video.authorVideo.id)?.id
+  const metrics = useAppSelector(state => state.videoMetrics[video.id])
+  const likes = metrics?.likesCount ?? video.likesCount
+  const comments = metrics?.comment_count ?? video.comment_count ?? video.Comment?.length ?? 0
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [removed, setRemoved] = useState(false)
   const [message, setMessage] = useState('')
-  useEffect(() => {
-    setLiked(Boolean(user?.Like?.some(item => item.videoId === video.id && item.like !== false)))
-    setFollowingId(user?.folowing?.find(item => item.authorId === video.authorVideo.id)?.id || null)
-  }, [user, video.id, video.authorVideo.id])
-  useEffect(() => setLikes(video.likesCount), [video.likesCount])
   const onActivate = useCallback(() => activate(video.id), [activate, video.id])
   const onStarted = useCallback(() => {
     const request = user ? watch : watchGuest
@@ -45,8 +43,6 @@ export const VideoCard = memo(function VideoCard({video, user, active, activate}
     setMessage('')
     try {
       await like({videoId: video.id}).unwrap()
-      setLikes(value => Math.max(0, value + (liked ? -1 : 1)))
-      setLiked(value => !value)
     } catch { setMessage('Не удалось сохранить лайк. Попробуйте ещё раз.') }
   }
   const toggleFollow = async () => {
@@ -55,10 +51,8 @@ export const VideoCard = memo(function VideoCard({video, user, active, activate}
     try {
       if (followingId) {
         await unfollow({id: followingId, authorId: video.authorVideo.id}).unwrap()
-        setFollowingId(null)
       } else {
-        const result = await follow({authorId: video.authorVideo.id}).unwrap()
-        setFollowingId(result.id)
+        await follow({authorId: video.authorVideo.id}).unwrap()
       }
     } catch { setMessage('Не удалось изменить подписку. Попробуйте ещё раз.') }
   }
@@ -95,7 +89,7 @@ export const VideoCard = memo(function VideoCard({video, user, active, activate}
       <div className="flex items-center gap-4 border-t pt-3 text-sm">
         {user ? <button aria-label="Нравится" aria-pressed={liked} disabled={likeState.isLoading} onClick={toggleLike} className={`flex items-center gap-1.5 disabled:opacity-50 ${liked ? 'text-rose-500' : 'text-muted-foreground'}`}><Heart size={19} fill={liked ? 'currentColor' : 'none'}/>{likes}</button>
           : <Link aria-label="Войти, чтобы поставить лайк" href="/authorization" className="flex items-center gap-1.5 text-muted-foreground"><Heart size={19}/>{likes}</Link>}
-        <button aria-label="Комментарии" aria-expanded={commentsOpen} onClick={() => setCommentsOpen(value => !value)} className="flex items-center gap-1.5 text-muted-foreground"><MessageCircle size={19}/>{video.comment_count ?? video.Comment?.length ?? 0}</button>
+        <button aria-label="Комментарии" aria-expanded={commentsOpen} onClick={() => setCommentsOpen(value => !value)} className="flex items-center gap-1.5 text-muted-foreground"><MessageCircle size={19}/>{comments}</button>
         <span className="flex items-center gap-1.5 text-muted-foreground" aria-label={`Просмотры: ${video.view_count}`}><Eye size={18}/>{video.view_count ?? video.watchers?.length ?? 0}</span>
         <div className="ml-auto"><Report videoId={video.id} userId={user?.id}/></div>
       </div>

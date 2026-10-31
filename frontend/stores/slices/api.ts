@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
 import {api_url} from "@/domen.api";
 import { IVideo } from '@/types/Video.interface';
+import { videoMetricsReceived } from './video-metrics.slice'
 
 const getToken = () => localStorage.getItem("token")
 export const videoHostingApi = createApi({
@@ -11,6 +12,9 @@ export const videoHostingApi = createApi({
   endpoints: (builder) => ({
     feed: builder.query<{items: IVideo[]; hasMore: boolean; nextOffset: number | null}, {limit: number; offset: number; sort: 'recent' | 'popular'}>({
       query: params => ({url: 'feed', params}),
+      async onQueryStarted(_, {dispatch, queryFulfilled}) {
+        try { const {data} = await queryFulfilled; dispatch(videoMetricsReceived(data.items)) } catch {}
+      },
     }),
     tags: builder.query({
       query: () => ({

@@ -9,9 +9,10 @@ import { AuthApi } from './slices/regapi'
 import { UserApi } from './slices/user.api'
 import { VideoUserApi } from './slices/video.api'
 import { AdminApi } from './slices/admin.api'
+import videoMetrics from './slices/video-metrics.slice'
 
 export const makeStore = () => configureStore({
-  reducer: {search, category, tag,
+  reducer: {search, category, tag, videoMetrics,
     [MusicApi.reducerPath]: MusicApi.reducer,
     [VideoUserApi.reducerPath]: VideoUserApi.reducer,
     [videoHostingApi.reducerPath]: videoHostingApi.reducer,
