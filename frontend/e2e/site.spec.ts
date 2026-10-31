@@ -1,4 +1,4 @@
-﻿import { test, expect } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 
 test('catalog renders synthetic video without browser errors and fits viewport', async ({page}) => {
  const errors:string[]=[];page.on('pageerror', e=>errors.push(e.message))
@@ -69,7 +69,7 @@ test('registration validates confirmation, handles refusal, then logs in', async
  await expect(page.getByLabel('Synthetic demo',{exact:true})).toBeVisible()
 })
 
-test('video plays and search works after direct navigation and reload', async ({page}) => {
+test('video plays and search works after direct navigation and reload', async ({page}, info) => {
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message))
  await page.goto('/')
  const video=page.getByLabel('Synthetic demo',{exact:true})
@@ -82,6 +82,11 @@ test('video plays and search works after direct navigation and reload', async ({
  await expect(page).toHaveURL(/founded\/Synthetic$/)
  await expect(page.getByLabel('Synthetic demo',{exact:true})).toBeVisible()
  await page.reload()
+ await expect(page.getByLabel('Synthetic demo',{exact:true})).toBeVisible()
+ if (info.project.name === 'mobile') await page.getByRole('button', {name: 'Открыть категории'}).first().click()
+ await page.getByText('Demo', {exact:true}).click()
+ await page.getByText('Shorts', {exact:true}).click()
+ await expect(page).toHaveURL(/category\/shorts$/)
  await expect(page.getByLabel('Synthetic demo',{exact:true})).toBeVisible()
  expect(errors).toEqual([])
 })

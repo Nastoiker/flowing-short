@@ -176,8 +176,8 @@ export const Video = ({
   const videoPath = `${api_url}/media` + video.embed_link
   return (
     <div className={cn(className, 'md:flex')}>
-      <div className={"flex justify-center"}>
-        <div>
+      <div className={"flex justify-center shrink-0"}>
+        <div className="relative w-[350px] max-w-[calc(100vw-40px)] sm:w-[400px]">
           <SubscribeChannel
             user={user}
             video={video}
