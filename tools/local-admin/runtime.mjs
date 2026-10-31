@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename, unlink } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 
 export function run(file, args, {cwd, env, timeout = 20000} = {}) {
@@ -60,8 +61,11 @@ export async function readJson(file, fallback = null) {
 
 export async function saveJson(file, value) {
   await mkdir(path.dirname(file), {recursive:true});
-  // Exclusive replacement is unnecessary: the server serializes all operations for each project.
-  await writeFile(file, JSON.stringify(value, null, 2) + '\n', {mode:0o600});
+  const temporary=file+'.'+randomUUID()+'.tmp';
+  try {
+    await writeFile(temporary, JSON.stringify(value, null, 2) + '\n', {mode:0o600,flag:'wx'});
+    await rename(temporary,file);
+  } finally {await unlink(temporary).catch(()=>{});}
 }
 
 export async function discoverProjects(root, directory) {
@@ -120,8 +124,13 @@ export class Runtime {
     if (p.tunnel.kind === 'compose') {
       const live = rows.find(r => r.service === p.tunnel.service && r.state === 'running');
       if (!live) return {running:false,url:null};
+      const record = await readJson(this.record(p));
       const logs = await this.execute('docker',['logs','--since',live.startedAt,'--tail','150',live.id]);
-      return {running:true,url:latestUrl(logs)};
+      const loggedUrl=latestUrl(logs);
+      const same=record?.containerId===live.id && record.startedAt===live.startedAt;
+      if(loggedUrl && (!same || record.url!==loggedUrl))await saveJson(this.record(p),{containerId:live.id,startedAt:live.startedAt,url:loggedUrl});
+      // Connection logs can push the original URL out of the tail. Never reuse it after a restart.
+      return {running:true,url:loggedUrl || (same?latestUrl(record.url || ''):null)};
     }
     const found = matchingNative(await nativeTunnels(this.execute),p);
     if (!found.length) return {running:false,url:null};

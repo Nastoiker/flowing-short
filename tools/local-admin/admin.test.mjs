@@ -4,6 +4,8 @@ import { createAdmin } from './server.mjs';
 import { Runtime, composeArgs, latestUrl, matchingNative, validateProjects } from './runtime.mjs';
 import path from 'node:path';
 import http from 'node:http';
+import {mkdtemp, unlink, rmdir} from 'node:fs/promises';
+import os from 'node:os';
 
 export const project = {id:'demo',name:'Demo',cwd:process.cwd(),composeProject:'isolated-demo',files:['compose.yaml'],profiles:[],localUrl:'http://127.0.0.1:13010',frontend:'frontend',tunnel:{kind:'compose',service:'tunnel'}};
 const snapshot = {status:'running',publicUrl:'https://demo.trycloudflare.com',tunnelRunning:true,containers:[]};
@@ -79,4 +81,18 @@ test('native tunnel matching requires exact executable and origin; URL parsing s
   assert.deepEqual(matchingNative(rows,{...p,localUrl:p.localUrl+'/'}).map(r=>r.pid),[1]);
   assert.equal(latestUrl('old https://old.trycloudflare.com new https://new.trycloudflare.com'),'https://new.trycloudflare.com');
   assert.equal(latestUrl('javascript:alert(1)'),null);
+});
+
+test('a live Docker tunnel keeps its URL when logs rotate but never after a different container start',async()=>{
+  const dir=await mkdtemp(path.join(os.tmpdir(),'flowing-admin-cache-'));
+  let logs='https://current.trycloudflare.com';
+  const r=new Runtime(dir,async()=>logs);
+  const row={id:'container-one',service:'tunnel',state:'running',startedAt:'2026-10-31T12:00:00Z'};
+  try {
+    assert.equal((await r.tunnel(project,[row])).url,'https://current.trycloudflare.com');
+    logs='connection restored';
+    assert.equal((await r.tunnel(project,[row])).url,'https://current.trycloudflare.com');
+    assert.equal((await r.tunnel(project,[{...row,startedAt:'2026-10-31T13:00:00Z'}])).url,null);
+    assert.equal((await r.tunnel(project,[{...row,id:'replacement'}])).url,null);
+  }finally{await unlink(path.join(dir,project.id+'-tunnel.json'));await rmdir(dir);}
 });
